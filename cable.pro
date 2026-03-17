@@ -42,9 +42,10 @@ Group {
 
   CableInsulationInside = Region[{1}];
   CableInsulationAround = Region[{2}];
-  CableArmor = Region[{3}];
-  CableOuterSheath = Region[{4}];
-  Ground = Region[5];
+  CableSemiconductor = Region[{3}];
+  CableArmor = Region[{4}];
+  CableOuterSheath = Region[{5}];
+  Ground = Region[{6}];
 
   // electrodynamics
   surrounding_dirichlet_ele = Region[{5}];
@@ -56,6 +57,7 @@ Group {
     WireSheath,
     CableInsulationInside,
     CableInsulationAround,
+    CableSemiconductor,
     CableArmor,
     CableOuterSheath
   } ];
@@ -64,7 +66,7 @@ Group {
   Sur_Dirichlet_Mag = Region[{50}];
   DomainS_Mag       = Region[{WireConductor}];
 
-  DomainNC_Mag  = Region[ {Ground, WireConductor, WireSemiconductor, WireInsulation, CableInsulationInside, CableInsulationAround, CableOuterSheath} ]; // non-conducting regions
+  DomainNC_Mag  = Region[ {Ground, WireConductor, WireSemiconductor, WireInsulation, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
   DomainC_Mag   = Region[ {WireSheath, CableArmor} ]; //conducting regions
   Domain_Mag = Region[ {DomainNC_Mag, DomainC_Mag} ];
 
@@ -83,14 +85,15 @@ Function {
 
   sigma[CableInsulationInside] = 10e-14;
   sigma[CableInsulationAround] = 10e-14;
+  sigma[CableSemiconductor] = 2;
   sigma[CableArmor] = 4.7e6; // Value from simpleCable.pro for galvanized/tensile steel
   sigma[CableOuterSheath] = 10e-15; // HDPE
   sigma[Ground] = 2; // conductivity of soil
 
-  epsilon[Region[{Ground, WireConductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableArmor, CableOuterSheath}]] = eps0;
+  epsilon[Region[{Ground, WireConductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
   epsilon[Region[{WireSemiconductor}]] = eps0*2.25;
 
-  nu[Region[{Ground, WireConductor, WireSemiconductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableOuterSheath}]]  = 1./mu0;
+  nu[Region[{Ground, WireConductor, WireSemiconductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
 
 

@@ -12,7 +12,9 @@ lead_sheath_thickness = 2.4*mm; // thickness of lead sheath
 inner_sheath_thickness = 2.4*mm; // thickness of inner sheath
 r_phase_cable_outer = r_phase_cable_with_insulation + lead_sheath_thickness + inner_sheath_thickness; // diameter of phase conductor with insulation and sheath
 
-steel_wire_armour_thickness  = 4*mm;  // thickness of Steel pipe
+steel_wire_armour_thickness  = 7*mm;  // thickness of Steel pipe
+
+space = 1*mm; // space between the three phase conductors
 
 r_cable_outer = 185/2*mm; // cable outer diameter 
 r_domain = 5*r_cable_outer; // electromagnetic analysis
@@ -46,22 +48,22 @@ EndFor
 
 
 radius = r_phase_cable_outer*(1 + (2/Sqrt(3))); // radius of the circumscribed circle of the triangle formed by the 3 phase conductors
-Disk(2) = {0., 0., 0., r_cable_outer};
-Disk(3) = {0., 0., 0., radius};
-Disk(4) = {0., 0., 0., r_cable_outer-7*mm};
+Disk(2) = {0., 0., 0., r_domain};
+Disk(3) = {0., 0., 0., r_cable_outer};
+Disk(4) = {0., 0., 0., r_cable_outer-steel_wire_armour_thickness};
+Disk(5) = {0., 0., 0., radius+space};
+Disk(6) = {0., 0., 0., radius};
 
-Rotate {{0, 0, 1}, {0, 0, 0}, Pi/2} { Surface{3}; }  // Rotate 90° counter-clockwise to remove the point on the arc
+Rotate {{0, 0, 1}, {0, 0, 0}, Pi/2} { Surface{6}; }  // Rotate 90° counter-clockwise to remove the point on the arc
 Rotate {{0, 0, 1}, {x0, y0, 0}, Pi/2} { Surface{14}; }  // Rotate 90° counter-clockwise to remove the point on the arc
 Rotate {{0, 0, 1}, {x2, y2, 0}, -Pi/6} { Surface{34}; }  // Rotate 90° counter-clockwise to remove the point on the arc
 
-// boundary computational domain
-Disk(5) = {0., 0., 0., r_domain};
-
 // Main cable
-cable_insulator() = BooleanDifference{ Surface{3}; }{ Surface{14, 24, 34}; };
-cable_armor() = BooleanDifference{ Surface{4}; }{ Surface{3}; };
-cable_outer() = BooleanDifference{ Surface{2}; }{ Surface{4}; };
-ground() = BooleanDifference{ Surface{5}; }{ Surface{2}; };
+cable_insulator() = BooleanDifference{ Surface{6}; }{ Surface{14, 24, 34}; };
+cable_semiconductor() = BooleanDifference{ Surface{5}; }{ Surface{6}; };
+cable_armor() = BooleanDifference{ Surface{4}; }{ Surface{5}; };
+cable_outer() = BooleanDifference{ Surface{3}; }{ Surface{4}; };
+ground() = BooleanDifference{ Surface{2}; }{ Surface{3}; };
 
 // Create layers for all three phases using loop
 For i In {1:3}
@@ -84,9 +86,10 @@ EndFor
 
 Physical Surface("cable_insulator_inside", 1) = cable_insulator(3);
 Physical Surface("cable_insulator_around", 2) = {cable_insulator(0), cable_insulator(1), cable_insulator(2)};
-Physical Surface("cable_armor", 3) = cable_armor();
-Physical Surface("cable_outer", 4) = cable_outer();
-Physical Surface("ground", 5) = ground();
+Physical Surface("cable_semiconductor", 3) = cable_semiconductor();
+Physical Surface("cable_armor", 4) = cable_armor();
+Physical Surface("cable_outer", 5) = cable_outer();
+Physical Surface("ground", 6) = ground();
 
 For i In {1:3}
     bnd_insulation_full~{i} = Boundary{Surface{insulation~{i}()};};
@@ -110,8 +113,11 @@ Physical Line("bnd_domain", 1011) = {bnd_ground(0)};
 Physical Line("bnd_outer_cable", 1012) = {bnd_ground(1)};
 
 bnd_cable_armor[] = Boundary{Surface{cable_armor()};};
-Physical Line("bnd_cable_armor", 1013) = {bnd_cable_armor(0)};
-Physical Line("bnd_cable_outer", 1014) = {bnd_cable_armor(1), bnd_cable_armor(2), bnd_cable_armor(3)};
+Physical Line("bnd_cable_armor_outer", 1013) = {bnd_cable_armor(0)};
+Physical Line("bnd_cable_armor_inner", 1014) = {bnd_cable_armor(1)};
+
+bnd_cable_semiconductor[] = Boundary{Surface{cable_semiconductor()};};
+// Physical Line("bnd_cable_semiconductor_inner", 1015) = {bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};
 
 // ==========================================================================
 // Mesh size
@@ -122,7 +128,8 @@ Physical Line("bnd_cable_outer", 1014) = {bnd_cable_armor(1), bnd_cable_armor(2)
 ms = DefineNumber[0.5, Min 1e-3, Max 1, Step 1e-3, Name "Mesh size"];
 Printf("Mesh size (ms) = %g", ms);
 
-MeshSize {PointsOf{Line{bnd_cable_armor(1), bnd_cable_armor(2), bnd_cable_armor(3)};}} = ms/50;
+MeshSize {PointsOf{Line{bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};}} = ms/50;
+MeshSize {PointsOf{Line{bnd_cable_armor(1)};}} = ms/400;
 MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/100;
 MeshSize {PointsOf{Line{bnd_ground(1)};}} = ms/100;
 MeshSize {PointsOf{Line{bnd_ground(0)};}} = ms/20;
