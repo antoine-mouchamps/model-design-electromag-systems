@@ -35,10 +35,15 @@ Group {
   WireInsulation_3 = Region[{33}];
   WireInsulation = Region[{WireInsulation_1, WireInsulation_2, WireInsulation_3}];
 
-  WireSheath_1 = Region[{14}];
-  WireSheath_2 = Region[{24}];
-  WireSheath_3 = Region[{34}];
-  WireSheath = Region[{WireSheath_1, WireSheath_2, WireSheath_3}];
+  WireLeadSheath_1 = Region[{14}];
+  WireLeadSheath_2 = Region[{24}];
+  WireLeadSheath_3 = Region[{34}];
+  WireLeadSheath = Region[{WireLeadSheath_1, WireLeadSheath_2, WireLeadSheath_3}];
+
+  WireHDPESheath_1 = Region[{15}];
+  WireHDPESheath_2 = Region[{25}];
+  WireHDPESheath_3 = Region[{35}];
+  WireHDPESheath = Region[{WireHDPESheath_1, WireHDPESheath_2, WireHDPESheath_3}];
 
   CableInsulationInside = Region[{1}];
   CableInsulationAround = Region[{2}];
@@ -54,7 +59,8 @@ Group {
     WireConductor,
     WireSemiconductor,
     WireInsulation,
-    WireSheath,
+    WireLeadSheath,
+    WireHDPESheath,
     CableInsulationInside,
     CableInsulationAround,
     CableSemiconductor,
@@ -66,8 +72,8 @@ Group {
   Sur_Dirichlet_Mag = Region[{50}];
   DomainS_Mag       = Region[{WireConductor}];
 
-  DomainNC_Mag  = Region[ {Ground, WireConductor, WireSemiconductor, WireInsulation, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
-  DomainC_Mag   = Region[ {WireSheath, CableArmor} ]; //conducting regions
+  DomainNC_Mag  = Region[ {Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
+  DomainC_Mag   = Region[ {WireLeadSheath, CableArmor} ]; //conducting regions
   Domain_Mag = Region[ {DomainNC_Mag, DomainC_Mag} ];
 
   DomainDummy = Region[123474982982]; //postpro
@@ -81,7 +87,8 @@ Function {
   sigma[WireConductor] = 5.96e7; // conductivity of copper
   sigma[WireSemiconductor] = 2; // typical for semiconducting layer, XLPE+carbon blacn (gpt)
   sigma[WireInsulation] = 10e-14; // https://www.researchgate.net/figure/Conductivity-of-XLPE-versus-temperature-and-electric-field_fig6_329127752
-  sigma[WireSheath] = 4.55e6; // conductivity of lead https://en.wikipedia.org/wiki/Electrical_resistivity_and_conductivity#Resistivity_and_conductivity_of_various_materials
+  sigma[WireLeadSheath] = 4.55e6; // conductivity of lead https://en.wikipedia.org/wiki/Electrical_resistivity_and_conductivity#Resistivity_and_conductivity_of_various_materials
+  sigma[WireHDPESheath] = 10e-15; // conductivity of HDPE
 
   sigma[CableInsulationInside] = 10e-14;
   sigma[CableInsulationAround] = 10e-14;
@@ -90,10 +97,10 @@ Function {
   sigma[CableOuterSheath] = 10e-15; // HDPE
   sigma[Ground] = 2; // conductivity of soil
 
-  epsilon[Region[{Ground, WireConductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
+  epsilon[Region[{Ground, WireConductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
   epsilon[Region[{WireSemiconductor}]] = eps0*2.25;
 
-  nu[Region[{Ground, WireConductor, WireSemiconductor, WireInsulation, WireSheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
+  nu[Region[{Ground, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
 
 
