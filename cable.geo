@@ -17,10 +17,7 @@ outer_sheath_cable = 4*mm;
 
 space = 1*mm; // space between the three phase conductors
 
-r_cable_outer = 185/2*mm; // cable outer diameter
-r_domain = 5*r_cable_outer; // electromagnetic analysis
-
-// AND WHY NOT INVESTIGATE THE OPTIC FIBER ALSO ????? WOULD IT BE PERTINENT ?????????????
+Include "cable_common.pro";
 
 //=================================================
 
@@ -51,6 +48,7 @@ EndFor
 
 
 radius = r_phase_cable_outer*(1 + (2/Sqrt(3))); // radius of the circumscribed circle of the triangle formed by the 3 phase conductors
+Disk(1) = {0., 0., 0., r_domain_inf};
 Disk(2) = {0., 0., 0., r_domain};
 Disk(3) = {0., 0., 0., r_cable_outer};
 Disk(4) = {0., 0., 0., r_cable_outer-outer_sheath_cable};
@@ -67,6 +65,7 @@ cable_semiconductor() = BooleanDifference{ Surface{5}; }{ Surface{6}; };
 cable_armor() = BooleanDifference{ Surface{4}; }{ Surface{5}; };
 cable_outer() = BooleanDifference{ Surface{3}; }{ Surface{4}; };
 ground() = BooleanDifference{ Surface{2}; }{ Surface{3}; };
+ground_inf() = BooleanDifference{ Surface{1}; }{ Surface{2}; };
 
 // Create layers for all three phases using loop
 For i In {1:3}
@@ -95,6 +94,7 @@ Physical Surface("cable_semiconductor", 3) = cable_semiconductor();
 Physical Surface("cable_armor", 4) = cable_armor();
 Physical Surface("cable_outer", 5) = cable_outer();
 Physical Surface("ground", 6) = ground();
+Physical Surface("ground_inf", 7) = ground_inf();
 
 For i In {1:3}
     bnd_insulation_full~{i} = Boundary{Surface{insulation~{i}()};};
@@ -119,13 +119,16 @@ EndFor
 bnd_cable_insulator_inside[] = Boundary{Surface{cable_insulator(3)};};
 Physical Line("bnd_cable_insulator_inside", 1000) = bnd_cable_insulator_inside();
 
+bnd_ground_inf[] = Boundary{Surface{ground_inf()};};
+Physical Line("bnd_ground_inf", 1011) = {bnd_ground_inf(0)};
+
 bnd_ground[] = Boundary{Surface{ground()};};
-Physical Line("bnd_domain", 1011) = {bnd_ground(0)};
-Physical Line("bnd_outer_cable", 1012) = {bnd_ground(1)};
+Physical Line("bnd_domain", 1012) = {bnd_ground(0)};
+Physical Line("bnd_outer_cable", 1013) = {bnd_ground(1)};
 
 bnd_cable_armor[] = Boundary{Surface{cable_armor()};};
-Physical Line("bnd_cable_armor_outer", 1013) = {bnd_cable_armor(0)};
-Physical Line("bnd_cable_armor_inner", 1014) = {bnd_cable_armor(1)};
+Physical Line("bnd_cable_armor_outer", 1014) = {bnd_cable_armor(0)};
+Physical Line("bnd_cable_armor_inner", 1015) = {bnd_cable_armor(1)};
 
 bnd_cable_semiconductor[] = Boundary{Surface{cable_semiconductor()};};
 // Physical Line("bnd_cable_semiconductor_inner", 1015) = {bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};

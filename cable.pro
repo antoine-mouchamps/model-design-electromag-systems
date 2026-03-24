@@ -1,3 +1,5 @@
+Include "cable_common.pro";
+
 DefineConstant[
   Flag_AnalysisType = {0,
     Choices{
@@ -51,10 +53,12 @@ Group {
   CableArmor = Region[{4}];
   CableOuterSheath = Region[{5}];
   Ground = Region[{6}];
+  GroundInf = Region[{7}];
 
   // electrodynamics
-  surrounding_dirichlet_ele = Region[{5}];
+  surrounding_dirichlet_ele = Region[{1011}];
   domain_ele = Region[ {
+    GroundInf,
     Ground,
     WireConductor,
     WireSemiconductor,
@@ -72,7 +76,7 @@ Group {
   Sur_Dirichlet_Mag = Region[{50}];
   DomainS_Mag       = Region[{WireConductor}];
 
-  DomainNC_Mag  = Region[ {Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
+  DomainNC_Mag  = Region[ {GroundInf, Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
   DomainC_Mag   = Region[ {WireLeadSheath, CableArmor} ]; //conducting regions
   Domain_Mag = Region[ {DomainNC_Mag, DomainC_Mag} ];
 
@@ -83,24 +87,26 @@ Function {
   mu0 = 4.e-7 * Pi;
   eps0 = 8.854187818e-12;
   mur_steel =4;
+  sigma_insulator = 10e-5; // conductivity of HDPE
 
   sigma[WireConductor] = 5.96e7; // conductivity of copper
   sigma[WireSemiconductor] = 2; // typical for semiconducting layer, XLPE+carbon blacn (gpt)
-  sigma[WireInsulation] = 10e-14; // https://www.researchgate.net/figure/Conductivity-of-XLPE-versus-temperature-and-electric-field_fig6_329127752
+  sigma[WireInsulation] = sigma_insulator; // https://www.researchgate.net/figure/Conductivity-of-XLPE-versus-temperature-and-electric-field_fig6_329127752
   sigma[WireLeadSheath] = 4.55e6; // conductivity of lead https://en.wikipedia.org/wiki/Electrical_resistivity_and_conductivity#Resistivity_and_conductivity_of_various_materials
-  sigma[WireHDPESheath] = 10e-15; // conductivity of HDPE
+  sigma[WireHDPESheath] = sigma_insulator;
 
-  sigma[CableInsulationInside] = 10e-14;
-  sigma[CableInsulationAround] = 10e-14;
-  sigma[CableSemiconductor] = 2;
+  sigma[CableInsulationInside] = sigma_insulator;
+  sigma[CableInsulationAround] = sigma_insulator;
+  sigma[CableSemiconductor] = sigma_insulator;
   sigma[CableArmor] = 4.7e6; // Value from simpleCable.pro for galvanized/tensile steel
-  sigma[CableOuterSheath] = 10e-15; // HDPE
+  sigma[CableOuterSheath] = sigma_insulator;
   sigma[Ground] = 2; // conductivity of soil
+  sigma[GroundInf] = 2; // conductivity of soil
 
-  epsilon[Region[{Ground, WireConductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
+  epsilon[Region[{Ground, GroundInf, WireConductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
   epsilon[Region[{WireSemiconductor}]] = eps0*2.25;
 
-  nu[Region[{Ground, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
+  nu[Region[{Ground, GroundInf, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
 
 
@@ -157,12 +163,10 @@ Constraint {
 Jacobian {
   { Name Vol;
     Case {
+      // Use the special infinite ring Jacobian in ground_inf.
+      { Region GroundInf; Jacobian VolSphShell {r_domain, r_domain_inf}; }
+      // ... and the standard "Vol" Jacobian everywhere else:
       { Region All; Jacobian Vol; }
-    }
-  }
-  { Name Sur;
-    Case {
-      { Region All; Jacobian Sur; }
     }
   }
 }
