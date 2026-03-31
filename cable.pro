@@ -76,9 +76,9 @@ Group {
   Sur_Dirichlet_Mag = Region[{50}];
   DomainS_Mag       = Region[{WireConductor}];
 
-  DomainNC_Mag  = Region[ {GroundInf, Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
-  DomainC_Mag   = Region[ {WireLeadSheath, CableArmor} ]; //conducting regions
-  Domain_Mag = Region[ {DomainNC_Mag, DomainC_Mag} ];
+  DomainNC_Mag  = Region[{GroundInf, Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
+  DomainC_Mag   = Region[{WireLeadSheath, CableArmor}]; //conducting regions
+  Domain_Mag = Region[{DomainNC_Mag, DomainC_Mag}];
 
   DomainDummy = Region[123474982982]; //postpro
 }
@@ -170,6 +170,7 @@ Jacobian {
     }
   }
 }
+
 Integration {
   { Name I1;
     Case {
@@ -183,16 +184,11 @@ Integration {
   }
 }
 
-
-
-
+//--------------------------------------------------------------------------
+// Electrodynamics
 //--------------------------------------------------------------------------
 If (Flag_AnalysisType == 0)
-  // Electrodynamics
-  //------------------------------------------------------------------------
-
   FunctionSpace {
-
     { Name Hgrad_v_Ele; Type Form0;
       BasisFunction { // v = \sum_n v_n  s_n,  for all nodes
         { Name sn; NameOfCoef vn; Function BF_Node;
@@ -204,11 +200,9 @@ If (Flag_AnalysisType == 0)
           NameOfConstraint ElectricScalarPotential; }
       }
     }
-
   }
 
   Formulation {
-
     { Name Electrodynamics_v; Type FemEquation;
       Quantity {
         { Name v; Type Local; NameOfSpace Hgrad_v_Ele; }
@@ -220,11 +214,9 @@ If (Flag_AnalysisType == 0)
           In domain_ele; Jacobian Vol; Integration I1; }
       }
     }
-
   }
 
   Resolution {
-
     { Name Electrodynamics;
       System {
         { Name Sys_Ele; NameOfFormulation Electrodynamics_v;
@@ -235,11 +227,9 @@ If (Flag_AnalysisType == 0)
         Generate[Sys_Ele]; Solve[Sys_Ele]; SaveSolution[Sys_Ele];
       }
     }
-
   }
 
   PostProcessing {
-
     { Name EleDyn_v; NameOfFormulation Electrodynamics_v;
       Quantity {
         { Name v; Value { Term { [ {v} ]; In domain_ele; Jacobian Vol; } } }
@@ -270,34 +260,33 @@ If (Flag_AnalysisType == 0)
     }
   }
 
-  PostOperation{
+  PostOperation {
+    { Name Post_Ele; NameOfPostProcessing EleDyn_v;
+      Operation {
+        Print[ v,  OnElementsOf domain_ele, File "res/v.pos" ];
+        Print[ norm_e, OnElementsOf domain_ele, Name "|E| [V/m]",  File "res/em.pos" ]; // Name is not compulsory, it may be adapted
+        Print[ norm_d, OnElementsOf domain_ele, Name "|D| [A/mÂ²]", File "res/dm.pos" ];
+        Print[ j, OnElementsOf domain_ele, Name "j [A/mÂ²]", File "res/j.pos" ];
+        Print[ j_displ, OnElementsOf domain_ele, Name "j_displ [A/mÂ²]", File "res/j_displ.pos" ];
+        Print[ e,  OnElementsOf domain_ele, Name "E [V/m]",  File "res/e.pos" ];
 
-  { Name Post_Ele; NameOfPostProcessing EleDyn_v;
-    Operation {
-      Print[ v,  OnElementsOf domain_ele, File "res/v.pos" ];
-      Print[ norm_e, OnElementsOf domain_ele, Name "|E| [V/m]",  File "res/em.pos" ]; // Name is not compulsory, it may be adapted
-      Print[ norm_d, OnElementsOf domain_ele, Name "|D| [A/mÂ²]", File "res/dm.pos" ];
-      Print[ j, OnElementsOf domain_ele, Name "j [A/mÂ²]", File "res/j.pos" ];
-      Print[ j_displ, OnElementsOf domain_ele, Name "j_displ [A/mÂ²]", File "res/j_displ.pos" ];
-      Print[ e,  OnElementsOf domain_ele, Name "E [V/m]",  File "res/e.pos" ];
-
-      Print[ ElectricEnergy[domain_ele], OnGlobal, Format Table, StoreInVariable $We,
-        SendToServer "{01Global ELE results/0Electric energy", File "res/energy.dat" ];
-      Print[ V0, OnRegion WireConductor_1, Format Table, StoreInVariable $voltage,
-        SendToServer "{01Global ELE results/0Voltage", Units "V", File "res/U.dat" ];
-      Print[ C_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $C1,
-        SendToServer "{01Global ELE results/1Capacitance", Units "F/m", File "res/C.dat" ];
+        Print[ ElectricEnergy[domain_ele], OnGlobal, Format Table, StoreInVariable $We,
+          SendToServer "{01Global ELE results/0Electric energy", File "res/energy.dat" ];
+        Print[ V0, OnRegion WireConductor_1, Format Table, StoreInVariable $voltage,
+          SendToServer "{01Global ELE results/0Voltage", Units "V", File "res/U.dat" ];
+        Print[ C_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $C1,
+          SendToServer "{01Global ELE results/1Capacitance", Units "F/m", File "res/C.dat" ];
+      }
     }
   }
-}
+
 EndIf
 
 //--------------------------------------------------------------------------
+// Magnetoquasistatics
+//--------------------------------------------------------------------------
 If (Flag_AnalysisType == 1)
-  // Magnetoquasistatics
-  //------------------------------------------------------------------------
   FunctionSpace {
-
     { Name Hcurl_a_Mag_2D; Type Form1P;
       BasisFunction {
         { Name se; NameOfCoef ae; Function BF_PerpendicularEdge;
@@ -326,171 +315,159 @@ If (Flag_AnalysisType == 1)
   }
 
   Formulation {
+    { Name MQS_a_2D; Type FemEquation; // Magnetoquasistatics
+      Quantity {
+        { Name a;  Type Local; NameOfSpace Hcurl_a_Mag_2D; }
 
-      { Name MQS_a_2D; Type FemEquation; // Magnetoquasistatics
-        Quantity {
-          { Name a;  Type Local; NameOfSpace Hcurl_a_Mag_2D; }
-
-          // stranded conductors (source)
-          { Name ir ; Type Local  ; NameOfSpace Hregion_i_2D ; }
-          { Name Us ; Type Global ; NameOfSpace Hregion_i_2D[Us] ; }
-          { Name Is ; Type Global ; NameOfSpace Hregion_i_2D[Is] ; }
-        }
-
-        Equation {
-          Galerkin { [ nu[] * Dof{d a} , {d a} ];
-            In Domain_Mag; Jacobian Vol; Integration I1; }
-          Galerkin { DtDof [ sigma[] * Dof{a} , {a} ];
-            In DomainC_Mag; Jacobian Vol; Integration I1; }
-
-          // or you use the constraints => allows accounting for sigma[]
-          Galerkin { [ -Ns[]/Sc[] * Dof{ir}, {a} ] ;
-            In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
-          Galerkin { DtDof [ Ns[]/Sc[] * Dof{a}, {ir} ] ;
-            In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
-
-          Galerkin { [ Ns[]/Sc[] / sigma[] * Ns[]/Sc[]* Dof{ir} , {ir} ] ; // resistance term
-            In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
-          //GlobalTerm { [ Rdc * Dof{Is} , {Is} ] ; In DomainS ; } // OR this resitance term
-          GlobalTerm { [ Dof{Us}, {Is} ] ; In DomainS_Mag ; }
-        }
+        // stranded conductors (source)
+        { Name ir ; Type Local  ; NameOfSpace Hregion_i_2D ; }
+        { Name Us ; Type Global ; NameOfSpace Hregion_i_2D[Us] ; }
+        { Name Is ; Type Global ; NameOfSpace Hregion_i_2D[Is] ; }
       }
 
-    }
+      Equation {
+        Galerkin { [ nu[] * Dof{d a} , {d a} ];
+          In Domain_Mag; Jacobian Vol; Integration I1; }
+        Galerkin { DtDof [ sigma[] * Dof{a} , {a} ];
+          In DomainC_Mag; Jacobian Vol; Integration I1; }
 
+        // or you use the constraints => allows accounting for sigma[]
+        Galerkin { [ -Ns[]/Sc[] * Dof{ir}, {a} ] ;
+          In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
+        Galerkin { DtDof [ Ns[]/Sc[] * Dof{a}, {ir} ] ;
+          In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
 
-    Resolution {
-
-      { Name Magnetoquasistatics;
-        System {
-          { Name Sys_Mag; NameOfFormulation MQS_a_2D;
-            Type Complex; Frequency freq; }
-        }
-        Operation {
-          CreateDir["res"];
-
-          InitSolution[Sys_Mag];
-          Generate[Sys_Mag]; Solve[Sys_Mag]; SaveSolution[Sys_Mag];
-        }
+        Galerkin { [ Ns[]/Sc[] / sigma[] * Ns[]/Sc[]* Dof{ir} , {ir} ] ; // resistance term
+          In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
+        //GlobalTerm { [ Rdc * Dof{Is} , {Is} ] ; In DomainS ; } // OR this resitance term
+        GlobalTerm { [ Dof{Us}, {Is} ] ; In DomainS_Mag ; }
       }
-
     }
+  }
 
-    PostProcessing {
-
-      { Name MQS_a_2D; NameOfFormulation MQS_a_2D;
-        PostQuantity {
-          { Name a; Value { Term { [ {a} ]; In Domain_Mag; Jacobian Vol; } } }
-          { Name az; Value { Term { [ CompZ[{a}] ]; In Domain_Mag; Jacobian Vol; } } }
-          { Name b; Value { Term { [ {d a} ]; In Domain_Mag; Jacobian Vol; } } }
-          { Name norm_b; Value { Term { [ Norm[{d a}] ]; In Domain_Mag; Jacobian Vol; } } }
-
-          { Name j; Value {
-              Term { [ -sigma[]*Dt[{a}]]; In DomainC_Mag; Jacobian Vol; }
-              Term { [ Ns[]/Sc[]*{ir} ]; In DomainS_Mag; Jacobian Vol; }
-            } }
-
-          { Name jz; Value {
-              Term { [ CompZ[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
-              Term { [ CompZ[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
-            } }
-
-          { Name norm_j; Value {
-              Term { [ Norm[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
-              Term { [ Norm[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
-            } }
-
-          { Name local_losses; Value {
-              Term { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
-              Term { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ]; In DomainS_Mag; Jacobian Vol; }
-            }
-          }
-
-          { Name global_losses; Value {
-              Integral { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]   ; In DomainC_Mag  ; Jacobian Vol ; Integration I1 ; }
-              Integral { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ] ; In DomainS_Mag  ; Jacobian Vol ; Integration I1 ; }
-            }
-          }
-
-          { Name U ; Value {
-              Term { [ {Us} ] ; In DomainS_Mag ; }
-            }
-          }
-
-          { Name I ; Value {
-              Term { [ {Is} ] ; In DomainS_Mag ; }
-            }
-          }
-
-          { Name R ; Value {
-              Term { [ -Re[{Us}/{Is}] ] ; In DomainS_Mag ; }
-            }
-          }
-
-          { Name L ; Value {
-              Term { [ -Im[{Us}/{Is}]/(2*Pi*freq) ] ; In DomainS_Mag ; }
-            }
-          }
-          { Name MagneticEnergy; Value {
-              Integral {
-                [ 0.5 * nu[] * SquNorm[{d a}] ];
-                In Domain_Mag; Jacobian Vol; Integration I1;
-              }
-            }
-          }
-          { Name I0 ; Value {// For recovering the imposed current in post-pro
-              Term { Type Global ; [ I * F_Cos_wt_p[]{2*Pi*freq, Pa}] ; In WireConductor_1 ; }
-            } 
-          }
-
-          { Name L_from_Energy ; Value { Term { Type Global; [ 2*$Wm/SquNorm[$current] ] ; In DomainDummy ; } } }
-        }
+  Resolution {
+    { Name Magnetoquasistatics;
+      System {
+        { Name Sys_Mag; NameOfFormulation MQS_a_2D;
+          Type Complex; Frequency freq; }
       }
+      Operation {
+        CreateDir["res"];
 
-    }
-
-
-    PostOperation{
-      // Magnetic
-      //-------------------------------
-
-      { Name Post_Mag; NameOfPostProcessing MQS_a_2D;
-        Operation {
-          // local results
-          Print[ az, OnElementsOf Domain_Mag,
-            Name "flux lines: Az [T m]", File "res/az.pos" ];
-          Print[ b, OnElementsOf Domain_Mag,
-            Name "B [T]", File "res/b.pos" ];
-          Print[ norm_b , OnElementsOf Domain_Mag,
-            Name "|B| [T]", File "res/bm.pos" ];
-          Print[ jz , OnElementsOf Region[{DomainC_Mag}],
-            Name "jz [A/m^2]", File "res/jz_inds.pos" ];
-          Print[ norm_j , OnElementsOf DomainC_Mag,
-            Name "|j| [A/m^2]", File "res/jm.pos" ];
-
-          // global results
-          Print[ global_losses[DomainC_Mag], OnGlobal, Format Table,
-            SendToServer "{01Global MAG results/0Losses conducting domain",
-            Units "W/m", File "res/losses_total.dat" ];
-
-          Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
-            SendToServer "{01Global MAG results/0Losses source",
-            Units "W/m", File "res/losses_inds.dat" ];
-          Print[ R, OnRegion WireConductor_1, Format Table,
-            SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
-          Print[ L, OnRegion WireConductor_1, Format Table,
-            SendToServer "{01Global MAG results/2Inductance", Units "H/m", File "res/Linds.dat" ];
-
-          Print[ MagneticEnergy[Domain_Mag], OnGlobal, Format Table, StoreInVariable $Wm,
-            SendToServer "{01Global MAG results/3Magnetic energy", File "res/MagEnergy.dat" ];
-          Print[ I0, OnRegion WireConductor_1, Format Table, StoreInVariable $current,
-            SendToServer "{01Global MAG results/4Current", Units "I", File "res/I.dat" ];
-          Print[ L_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $L1,
-            SendToServer "{01Global MAG results/5Inductance from energy", Units "H/m", File "res/L.dat" ];
-        }
+        InitSolution[Sys_Mag];
+        Generate[Sys_Mag]; Solve[Sys_Mag]; SaveSolution[Sys_Mag];
       }
-
     }
+  }
+
+  PostProcessing {
+    { Name MQS_a_2D; NameOfFormulation MQS_a_2D;
+      PostQuantity {
+        { Name a; Value { Term { [ {a} ]; In Domain_Mag; Jacobian Vol; } } }
+        { Name az; Value { Term { [ CompZ[{a}] ]; In Domain_Mag; Jacobian Vol; } } }
+        { Name b; Value { Term { [ {d a} ]; In Domain_Mag; Jacobian Vol; } } }
+        { Name norm_b; Value { Term { [ Norm[{d a}] ]; In Domain_Mag; Jacobian Vol; } } }
+
+        { Name j; Value {
+            Term { [ -sigma[]*Dt[{a}]]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ Ns[]/Sc[]*{ir} ]; In DomainS_Mag; Jacobian Vol; }
+          } }
+
+        { Name jz; Value {
+            Term { [ CompZ[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ CompZ[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
+          } }
+
+        { Name norm_j; Value {
+            Term { [ Norm[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ Norm[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
+          } }
+
+        { Name local_losses; Value {
+            Term { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ]; In DomainS_Mag; Jacobian Vol; }
+          }
+        }
+
+        { Name global_losses; Value {
+            Integral { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]   ; In DomainC_Mag  ; Jacobian Vol ; Integration I1 ; }
+            Integral { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ] ; In DomainS_Mag  ; Jacobian Vol ; Integration I1 ; }
+          }
+        }
+
+        { Name U ; Value {
+            Term { [ {Us} ] ; In DomainS_Mag ; }
+          }
+        }
+
+        { Name I ; Value {
+            Term { [ {Is} ] ; In DomainS_Mag ; }
+          }
+        }
+
+        { Name R ; Value {
+            Term { [ -Re[{Us}/{Is}] ] ; In DomainS_Mag ; }
+          }
+        }
+
+        { Name L ; Value {
+            Term { [ -Im[{Us}/{Is}]/(2*Pi*freq) ] ; In DomainS_Mag ; }
+          }
+        }
+        { Name MagneticEnergy; Value {
+            Integral {
+              [ 0.5 * nu[] * SquNorm[{d a}] ];
+              In Domain_Mag; Jacobian Vol; Integration I1;
+            }
+          }
+        }
+        { Name I0 ; Value {// For recovering the imposed current in post-pro
+            Term { Type Global ; [ I * F_Cos_wt_p[]{2*Pi*freq, Pa}] ; In WireConductor_1 ; }
+          } 
+        }
+
+        { Name L_from_Energy ; Value { Term { Type Global; [ 2*$Wm/SquNorm[$current] ] ; In DomainDummy ; } } }
+      }
+    }
+  }
+
+  PostOperation{
+    { Name Post_Mag; NameOfPostProcessing MQS_a_2D;
+      Operation {
+        // local results
+        Print[ az, OnElementsOf Domain_Mag,
+          Name "flux lines: Az [T m]", File "res/az.pos" ];
+        Print[ b, OnElementsOf Domain_Mag,
+          Name "B [T]", File "res/b.pos" ];
+        Print[ norm_b , OnElementsOf Domain_Mag,
+          Name "|B| [T]", File "res/bm.pos" ];
+        Print[ jz , OnElementsOf Region[{DomainC_Mag}],
+          Name "jz [A/m^2]", File "res/jz_inds.pos" ];
+        Print[ norm_j , OnElementsOf DomainC_Mag,
+          Name "|j| [A/m^2]", File "res/jm.pos" ];
+
+        // global results
+        Print[ global_losses[DomainC_Mag], OnGlobal, Format Table,
+          SendToServer "{01Global MAG results/0Losses conducting domain",
+          Units "W/m", File "res/losses_total.dat" ];
+
+        Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
+          SendToServer "{01Global MAG results/0Losses source",
+          Units "W/m", File "res/losses_inds.dat" ];
+        Print[ R, OnRegion WireConductor_1, Format Table,
+          SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
+        Print[ L, OnRegion WireConductor_1, Format Table,
+          SendToServer "{01Global MAG results/2Inductance", Units "H/m", File "res/Linds.dat" ];
+
+        Print[ MagneticEnergy[Domain_Mag], OnGlobal, Format Table, StoreInVariable $Wm,
+          SendToServer "{01Global MAG results/3Magnetic energy", File "res/MagEnergy.dat" ];
+        Print[ I0, OnRegion WireConductor_1, Format Table, StoreInVariable $current,
+          SendToServer "{01Global MAG results/4Current", Units "I", File "res/I.dat" ];
+        Print[ L_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $L1,
+          SendToServer "{01Global MAG results/5Inductance from energy", Units "H/m", File "res/L.dat" ];
+      }
+    }
+  }
 
 EndIf
 
