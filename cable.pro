@@ -87,7 +87,7 @@ Function {
   mu0 = 4.e-7 * Pi;
   eps0 = 8.854187818e-12;
   mur_steel = 4;
-  sigma_insulator = 10e-8; // conductivity of HDPE
+  sigma_insulator = 10e-7; // conductivity of HDPE
 
   sigma[WireConductor] = 5.96e7; // conductivity of copper
   sigma[WireSemiconductor] = 2; // typical for semiconducting layer, XLPE+carbon blacn (gpt)

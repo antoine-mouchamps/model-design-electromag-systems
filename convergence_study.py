@@ -24,10 +24,21 @@ ONELAB_DIR = r"C:\Users\antoi\Documents\UNIF\master_2\modelling_design_electroma
 GETDP_EXE = os.path.join(ONELAB_DIR, "getdp.exe")
 
 # ms values to sweep — from coarse to fine
-MS_VALUES = [2.0, 1.5, 1.0, 0.75, 0.5]  # , 0.25, 0.175, 0.125]
+MS_VALUES = [
+    2.0,
+    1.5,
+    1.0,
+    0.75,
+    0.5,
+    0.4,
+    0.35,
+    0.3,
+    0.25,
+    0.2,
+]
 
 # Choose the analysis type: "electrodynamics" or "magnetodynamics"
-ANALYSIS = "electrodynamics"
+ANALYSIS = "magnetodynamics"
 
 # Per-analysis configuration: GetDP solve/post names and result files to collect.
 # Each entry in "results" maps a key to (dat_filename_in_res/, axis_label).
@@ -62,8 +73,9 @@ RESULTS_DIR = os.path.join(WORK_DIR, f"convergence_results_{ANALYSIS}")
 RESULTS_FILE = os.path.join(RESULTS_DIR, "results.json")
 ALWAYS_RUN = False
 
-# Set True to apply log scale on the y-axis of all plots.
-LOG_SCALE = False
+# Log scale flags — set independently for each axis.
+LOG_SCALE_X = True
+LOG_SCALE_Y = False
 
 
 # ---------------------------------------------------------------------------
@@ -76,13 +88,21 @@ def mesh(ms):
     Generate a 2-D mesh for the given ms value using the gmsh Python API.
     Passing '-setnumber ms <value>' via initialize's argv overrides the
     DefineNumber default in the .geo file.
+    Returns the total number of 2-D elements in the mesh.
     """
     gmsh.initialize(["", "-setnumber", "ms", str(ms)])
     gmsh.option.setNumber("General.Verbosity", 3)
     gmsh.open(GEO_FILE)
     gmsh.model.mesh.generate(2)
     gmsh.write(MSH_FILE)
+    # Count all triangular / quadrilateral elements (dimension 2)
+    element_types, _, _ = gmsh.model.mesh.getElements(dim=2)
+    n_elements = sum(
+        len(gmsh.model.mesh.getElements(dim=2, tag=-1)[1][i])
+        for i in range(len(element_types))
+    )
     gmsh.finalize()
+    return n_elements
 
 
 def solve(solve_name, post_name, flag):
@@ -162,6 +182,7 @@ def run_sweep():
     result_keys = cfg["results"]  # {key: (dat_filename, label)}
 
     valid_ms = []
+    n_elements_list = []
     collected = {key: [] for key in result_keys}
 
     for ms in MS_VALUES:
@@ -172,7 +193,8 @@ def run_sweep():
         # 1. Generate mesh via gmsh Python API
         try:
             print("  [Gmsh] meshing...")
-            mesh(ms)
+            n_elem = mesh(ms)
+            print(f"  Number of 2-D elements: {n_elem}")
         except Exception as exc:
             print(f"  !! Gmsh FAILED: {exc}")
             continue
@@ -198,6 +220,7 @@ def run_sweep():
             continue
 
         valid_ms.append(ms)
+        n_elements_list.append(n_elem)
         for key, val in row.items():
             collected[key].append(val)
 
@@ -207,7 +230,12 @@ def run_sweep():
         )
         raise SystemExit(1)
 
-    data = {"ms": valid_ms, "analysis": ANALYSIS, **collected}
+    data = {
+        "ms": valid_ms,
+        "n_elements": n_elements_list,
+        "analysis": ANALYSIS,
+        **collected,
+    }
     with open(RESULTS_FILE, "w") as f:
         json.dump(data, f, indent=2)
     print(f"\nResults saved → {RESULTS_FILE}")
@@ -225,7 +253,12 @@ def plot(results_path):
 
     analysis = data.get("analysis", ANALYSIS)
     cfg = ANALYSIS_CONFIG[analysis]
-    valid_ms = data["ms"]
+    x = data.get("n_elements", data["ms"])
+    xlabel = (
+        "Number of elements   (coarse  ←  →  fine)"
+        if "n_elements" in data
+        else "Mesh size parameter ms   (coarse  ←  →  fine)"
+    )
     result_keys = cfg["results"]
 
     n = len(result_keys)
@@ -234,14 +267,16 @@ def plot(results_path):
         axes = [axes]
 
     for ax, (key, (_, label)) in zip(axes, result_keys.items()):
-        ax.plot(valid_ms, data[key], "o-", linewidth=1, markersize=8)
+        ax.plot(x, data[key], "o-", linewidth=1, markersize=8)
         ax.set_ylabel(label)
         ax.invert_xaxis()
         ax.grid(True, alpha=0.5, linestyle="--", color="gray")
-        if LOG_SCALE:
+        if LOG_SCALE_X:
+            ax.set_xscale("log")
+        if LOG_SCALE_Y:
             ax.set_yscale("log")
 
-    axes[-1].set_xlabel("Mesh size parameter ms   (coarse  ←  →  fine)")
+    axes[-1].set_xlabel(xlabel)
     fig.suptitle(
         f"Mesh Convergence Study — {cfg['title']}", fontsize=13, fontweight="bold"
     )
@@ -250,12 +285,11 @@ def plot(results_path):
     out_pdf = os.path.join(os.path.dirname(results_path), "convergence_study.pdf")
     plt.savefig(out_pdf, bbox_inches="tight")
     print(f"Plot saved → {out_pdf}")
-    plt.show()
 
 
 def plot_relative_change(results_path):
     """
-    Plot the relative change between consecutive ms steps for all quantities
+    Plot the relative change between consecutive steps for all quantities
     on a single axis, to visualise convergence rate.
     """
     with open(results_path) as f:
@@ -263,28 +297,35 @@ def plot_relative_change(results_path):
 
     analysis = data.get("analysis", ANALYSIS)
     cfg = ANALYSIS_CONFIG[analysis]
-    valid_ms = data["ms"]
+    x_all = data.get("n_elements", data["ms"])
+    xlabel = (
+        "Number of elements   (coarse  ←  →  fine)"
+        if "n_elements" in data
+        else "Mesh size parameter ms   (coarse  ←  →  fine)"
+    )
     result_keys = cfg["results"]
 
-    # x-axis: the finer ms of each consecutive pair
-    ms_mid = valid_ms[1:]
+    # x-axis: the finer point of each consecutive pair
+    x_mid = x_all[1:]
 
     fig, ax = plt.subplots(figsize=(9, 5))
 
     for key, (_, label) in result_keys.items():
         values = data[key]
         rel_changes = [
-            abs(values[i] - values[i - 1]) / abs(values[i - 1])
+            100 * (values[i] - values[i - 1]) / (values[i - 1])
             for i in range(1, len(values))
         ]
-        ax.plot(ms_mid, rel_changes, "o-", linewidth=1, markersize=7, label=label)
+        ax.plot(x_mid, rel_changes, "o-", linewidth=1, markersize=7, label=label)
 
     ax.invert_xaxis()
-    ax.set_xlabel("Mesh size parameter ms   (coarse  ←  →  fine)")
-    ax.set_ylabel(r"Relative change [\%]")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Relative change [%]")
     ax.legend()
     ax.grid(True, alpha=0.5, linestyle="--", color="gray")
-    if LOG_SCALE:
+    if LOG_SCALE_X:
+        ax.set_xscale("log")
+    if LOG_SCALE_Y:
         ax.set_yscale("log")
 
     plt.tight_layout()
@@ -294,7 +335,6 @@ def plot_relative_change(results_path):
     )
     plt.savefig(out_pdf, bbox_inches="tight")
     print(f"Plot saved → {out_pdf}")
-    plt.show()
 
 
 # ---------------------------------------------------------------------------
