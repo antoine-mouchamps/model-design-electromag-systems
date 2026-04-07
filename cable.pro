@@ -85,7 +85,7 @@ Group {
   DomainDummy = Region[123474982982]; //postpro
 
   // Magneto-Thermal
-  Domain_The = Region[{
+  /*Domain_The = Region[{
     WireConductor,
     WireSemiconductor,
     WireInsulation,
@@ -96,9 +96,23 @@ Group {
     CableSemiconductor,
     CableArmor,
     CableOuterSheath
-  }];
+  }];*/
 
   Sur_Rob_The = Region[{1013}];
+
+  Domain_The = Region[{
+    WireConductor,
+    WireSemiconductor,
+    WireInsulation,
+    WireLeadSheath,
+    WireHDPESheath,
+    CableInsulationInside,
+    CableInsulationAround,
+    CableSemiconductor,
+    CableArmor,
+    CableOuterSheath,
+    Sur_Rob_The // this guy must be added to Domain_The for integration of Robin-type BC.
+  }];
 }
 
 Function {
@@ -216,6 +230,7 @@ Integration {
     Case {
       { Type Gauss;
         Case {
+          { GeoElement Line;   NumberOfPoints  1; }
           { GeoElement Triangle;   NumberOfPoints  4; }
           { GeoElement Quadrangle; NumberOfPoints  4; }
         }
@@ -599,7 +614,7 @@ If (Flag_AnalysisType == 2)
       }
       Equation {
         Integral { [ k[] * Dof{d T} , {d T} ];
-          In Domain_The; Jacobian Vol; Integration I1; }
+          In Region[{Domain_The, -Sur_Rob_The}]; Jacobian Vol; Integration I1; }
 
         // The "<a>[ ... ]" syntax instructs GetDP to evaluate the expression
         // inside in complex arithmetic, even though the thermal formulation is
@@ -623,12 +638,12 @@ If (Flag_AnalysisType == 2)
   Resolution {
     { Name Magnetothermal;
       System {
+        // The thermal system is real-valued:
+        { Name Sys_The; NameOfFormulation Thermal_T; Type Real; }
         // The magnetic system is complex-valued and solved at a single frequency
         // (as in the frequency-domain case of tutorial 4):
         { Name Sys_Mag; NameOfFormulation MQS_a_2D;
           Type Complex; Frequency freq; }
-        // The thermal system is real-valued:
-        { Name Sys_The; NameOfFormulation Thermal_T; }
       }
       Operation {
         // Initialize the temperature to the initial condition "T0[]":
@@ -718,6 +733,18 @@ If (Flag_AnalysisType == 2)
         }
         { Name T;
           Value {
+            Term { [ <T>[{T}] ]; In Domain_The; Jacobian Vol; }
+          }
+        }
+      }
+    }
+  }
+
+  PostProcessing {
+    { Name thermal_postpro; NameOfFormulation Thermal_T;
+      PostQuantity {
+        { Name T;
+          Value {
             Term { [ {T} ]; In Domain_The; Jacobian Vol; }
           }
         }
@@ -763,6 +790,15 @@ If (Flag_AnalysisType == 2)
           SendToServer "{01Global MAG results/4Current", Units "I", File "res/I.dat" ];
         Print[ L_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $L1,
           SendToServer "{01Global MAG results/5Inductance from energy", Units "H/m", File "res/L.dat" ];
+      }
+    }
+  }
+
+  PostOperation{ // use this guy to have T as real-value in the post-pro.
+    { Name Post_TherOnly; NameOfPostProcessing thermal_postpro;
+      Operation {
+        Print[ T, OnElementsOf Domain_The, 
+          Name "Temperature [°C]", File "res/T.pos" ];
       }
     }
   }
