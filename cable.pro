@@ -109,7 +109,7 @@ Function {
   mu0 = 4.e-7 * Pi;
   eps0 = 8.854187818e-12;
   mur_steel = 4;
-  sigma_insulator = 10e-7; // conductivity of HDPE
+  sigma_insulator = 1e-6; // conductivity of HDPE
 
   If(Flag_AnalysisType == 3)
     sigma[WireConductor] = 5.96e7 / (1 + 0.00386 * ($1 - 20));
@@ -126,8 +126,8 @@ Function {
   sigma[CableSemiconductor] = sigma_insulator;
   sigma[CableArmor] = 4.7e6; // Value from simpleCable.pro for galvanized/tensile steel
   sigma[CableOuterSheath] = sigma_insulator;
-  sigma[Ground] = 2; // conductivity of soil
-  sigma[GroundInf] = 2; // conductivity of soil
+  sigma[Ground] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
+  sigma[GroundInf] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
 
   epsilon[Region[{Ground, GroundInf, WireConductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
   epsilon[Region[{WireSemiconductor}]] = eps0*2.25;

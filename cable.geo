@@ -149,8 +149,8 @@ MeshSize {PointsOf{Line{bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), 
 MeshSize {PointsOf{Line{bnd_cable_armor(1)};}} = ms/225; // inner armor boundary
 MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/150; // outer armor boundary
 MeshSize {PointsOf{Line{bnd_ground(1)};}} = ms/100;
-MeshSize {PointsOf{Line{bnd_ground(0)};}} = ms/40;
-MeshSize {PointsOf{Line{bnd_ground_inf(0)};}} = ms/20;
+MeshSize {PointsOf{Line{bnd_ground(0)};}} = ms/80;
+MeshSize {PointsOf{Line{bnd_ground_inf(0)};}} = ms/50;
 
 For i In {1:3}
     MeshSize {PointsOf{Line{bnd_conductor~{i}};}} = ms/400;
