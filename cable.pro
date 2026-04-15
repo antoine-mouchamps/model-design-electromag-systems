@@ -85,20 +85,8 @@ Group {
   DomainDummy = Region[123474982982]; //postpro
 
   // Magneto-Thermal
-  /*Domain_The = Region[{
-    WireConductor,
-    WireSemiconductor,
-    WireInsulation,
-    WireLeadSheath,
-    WireHDPESheath,
-    CableInsulationInside,
-    CableInsulationAround,
-    CableSemiconductor,
-    CableArmor,
-    CableOuterSheath
-  }];*/
-
-  Sur_Rob_The = Region[{1013}];
+  // Sur_Rob_The = Region[{1011}]; // Infinite boundary (r_domain_inf)
+  Sur_Rob_The = Region[{1012}]; // Stop at r_domain boundary
 
   Domain_The = Region[{
     WireConductor,
@@ -111,7 +99,9 @@ Group {
     CableSemiconductor,
     CableArmor,
     CableOuterSheath,
-    Sur_Rob_The // this guy must be added to Domain_The for integration of Robin-type BC.
+    // GroundInf,
+    Ground,
+    Sur_Rob_The
   }];
 }
 
@@ -121,8 +111,12 @@ Function {
   mur_steel = 4;
   sigma_insulator = 10e-7; // conductivity of HDPE
 
-  sigma[WireConductor] = 5.96e7; // conductivity of copper
-  sigma[WireSemiconductor] = 2; // typical for semiconducting layer, XLPE+carbon blacn (gpt)
+  If(Flag_AnalysisType == 3)
+    sigma[WireConductor] = 5.96e7 / (1 + 0.00386 * ($1 - 20));
+  Else
+    sigma[WireConductor] = 5.96e7; // conductivity of copper
+  EndIf
+  sigma[WireSemiconductor] = 2; // typical for semiconducting layer, XLPE+carbon black (gpt)
   sigma[WireInsulation] = sigma_insulator; // https://www.researchgate.net/figure/Conductivity-of-XLPE-versus-temperature-and-electric-field_fig6_329127752
   sigma[WireLeadSheath] = 4.55e6; // conductivity of lead https://en.wikipedia.org/wiki/Electrical_resistivity_and_conductivity#Resistivity_and_conductivity_of_various_materials
   sigma[WireHDPESheath] = sigma_insulator;
@@ -733,7 +727,7 @@ If (Flag_AnalysisType == 2)
         }
         { Name T;
           Value {
-            Term { [ <T>[{T}] ]; In Domain_The; Jacobian Vol; }
+            Term { [ {T} ]; In Domain_The; Jacobian Vol; }
           }
         }
       }
@@ -802,8 +796,6 @@ If (Flag_AnalysisType == 2)
       }
     }
   }
-
-
 EndIf
 
 If (Flag_AnalysisType == 3)
@@ -833,6 +825,18 @@ If (Flag_AnalysisType == 3)
         { NameOfCoef Is ; EntityType Region ; NameOfConstraint Current ; }
       }
     }
+
+    // Temperature, discretized with standard nodal (Lagrange) basis functions (as
+    // in tutorial 2):
+    { Name H1_T_The; Type Form0;
+      BasisFunction {
+        { Name sn; NameOfCoef Tn; Function BF_Node; Support Domain_The;
+          Entity NodesOf[All]; }
+      }
+      Constraint {
+        { NameOfCoef Tn; EntityType NodesOf; NameOfConstraint T_The; }
+      }
+    }
   }
 
   Formulation {
@@ -844,12 +848,15 @@ If (Flag_AnalysisType == 3)
         { Name ir ; Type Local  ; NameOfSpace Hregion_i_2D ; }
         { Name Us ; Type Global ; NameOfSpace Hregion_i_2D[Us] ; }
         { Name Is ; Type Global ; NameOfSpace Hregion_i_2D[Is] ; }
+        
+        // Temperature
+        { Name T; Type Local; NameOfSpace H1_T_The; }
       }
 
       Equation {
         Galerkin { [ nu[] * Dof{d a} , {d a} ];
           In Domain_Mag; Jacobian Vol; Integration I1; }
-        Galerkin { DtDof [ sigma[] * Dof{a} , {a} ];
+        Galerkin { DtDof [ sigma[<T>[{T}]] * Dof{a} , {a} ];
           In DomainC_Mag; Jacobian Vol; Integration I1; }
 
         // or you use the constraints => allows accounting for sigma[]
@@ -858,29 +865,91 @@ If (Flag_AnalysisType == 3)
         Galerkin { DtDof [ Ns[]/Sc[] * Dof{a}, {ir} ] ;
           In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
 
-        Galerkin { [ Ns[]/Sc[] / sigma[] * Ns[]/Sc[]* Dof{ir} , {ir} ] ; // resistance term
+        Galerkin { [ Ns[]/Sc[] / sigma[<T>[{T}]] * Ns[]/Sc[]* Dof{ir} , {ir} ] ; // resistance term
           In DomainS_Mag ; Jacobian Vol ; Integration I1 ; }
         //GlobalTerm { [ Rdc * Dof{Is} , {Is} ] ; In DomainS ; } // OR this resitance term
         GlobalTerm { [ Dof{Us}, {Is} ] ; In DomainS_Mag ; }
       }
     }
-  }
 
-  Resolution {
-    { Name Magnetoquasistatics;
-      System {
-        { Name Sys_Mag; NameOfFormulation MQS_a_2D;
-          Type Complex; Frequency freq; }
+    { Name Thermal_T; Type FemEquation;
+      Quantity {
+        { Name T; Type Local; NameOfSpace H1_T_The; }
+
+        // Declaring "{a}" and "{ir}" here gives access to the magnetic solution
+        // (computed in the frequency domain) in order to evaluate Joule losses:
+        { Name a; Type Local; NameOfSpace Hcurl_a_Mag_2D; }
+        { Name ir; Type Local; NameOfSpace Hregion_i_2D; }
       }
-      Operation {
-        CreateDir["res"];
+      Equation {
+        Integral { [ k[] * Dof{d T} , {d T} ];
+          In Region[{Domain_The, -Sur_Rob_The}]; Jacobian Vol; Integration I1; }
 
-        InitSolution[Sys_Mag];
-        Generate[Sys_Mag]; Solve[Sys_Mag]; SaveSolution[Sys_Mag];
+        // The "<a>[ ... ]" syntax instructs GetDP to evaluate the expression
+        // inside in complex arithmetic, even though the thermal formulation is
+        // real-valued. Without it, only the real part of "{a}" and "{ir}" would
+        // be used, which would give incorrect results. The expression
+        // "SquNorm[...]"  computes the squared modulus "|...|^2 = Re[...]^2 +
+        // Im[...]^2":
+        Integral { [ -0.5 * sigma[<T>[{T}]] * <a>[SquNorm[Dt[{a}]]],
+            {T} ]; In DomainC_Mag; Jacobian Vol; Integration I1; }
+        Integral { [ -0.5 * (1/sigma[<T>[{T}]]) * <ir>[SquNorm[Ns[]/Sc[]*{ir}]],
+            {T} ]; In DomainS_Mag; Jacobian Vol; Integration I1; }
+
+        Integral { [ h[] * Dof{T} , {T} ];
+          In Sur_Rob_The; Jacobian Sur; Integration I1; }
+        Integral { [ -h[] * T0[] , {T} ];
+          In Sur_Rob_The; Jacobian Sur; Integration I1; }
       }
     }
   }
 
+  Resolution {
+    { Name Magnetothermalcoupled;
+      System {
+        // The thermal system is real-valued:
+        { Name Sys_The; NameOfFormulation Thermal_T; Type Real; }
+        // The magnetic system is complex-valued and solved at a single frequency
+        // (as in the frequency-domain case of tutorial 4):
+        { Name Sys_Mag; NameOfFormulation MQS_a_2D;
+          Type Complex; Frequency freq; }
+      }
+      Operation {
+        // Initialize the temperature to the initial condition "T0[]":
+        InitSolution[Sys_The];
+
+        // First solve: magnetic with the initial temperature, then thermal:
+        Generate[Sys_Mag]; Solve[Sys_Mag];
+        Generate[Sys_The]; Solve[Sys_The];
+
+        // Re-generate the magnetic system with the updated temperature (which
+        // changes sigma), and compute the initial residual:
+        Generate[Sys_Mag];
+        GetResidual[Sys_Mag, $res0];
+
+        // Initialize runtime variables to track the residual and the iteration
+        // count, then print out the absolute and relative residual:
+        Evaluate[ $res = $res0, $iter = 0 ];
+        Print[{$iter, $res, $res / $res0},
+          Format "Residual %03g: abs %14.12e rel %14.12e"];
+
+        // Iterate until convergence (same loop structure as in tutorial 3):
+        While[$res > NL_tol_abs && $res / $res0 > NL_tol_rel &&
+          $res / $res0 <= 1 && $iter < NL_iter_max]{
+          Solve[Sys_Mag];
+          Generate[Sys_The]; Solve[Sys_The];
+          Generate[Sys_Mag]; GetResidual[Sys_Mag, $res];
+          Evaluate[ $iter = $iter + 1 ];
+          Print[{$iter, $res, $res / $res0},
+            Format "Residual %03g: abs %14.12e rel %14.12e"];
+        }
+
+        SaveSolution[Sys_Mag];
+        SaveSolution[Sys_The];
+      }
+    }
+  }
+  
   PostProcessing {
     { Name MQS_a_2D; NameOfFormulation MQS_a_2D;
       PostQuantity {
@@ -890,29 +959,29 @@ If (Flag_AnalysisType == 3)
         { Name norm_b; Value { Term { [ Norm[{d a}] ]; In Domain_Mag; Jacobian Vol; } } }
 
         { Name j; Value {
-            Term { [ -sigma[]*Dt[{a}]]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ -sigma[<T>[{T}]]*Dt[{a}]]; In DomainC_Mag; Jacobian Vol; }
             Term { [ Ns[]/Sc[]*{ir} ]; In DomainS_Mag; Jacobian Vol; }
           } }
 
         { Name jz; Value {
-            Term { [ CompZ[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ CompZ[-sigma[<T>[{T}]]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
             Term { [ CompZ[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
           } }
 
         { Name norm_j; Value {
-            Term { [ Norm[-sigma[]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ Norm[-sigma[<T>[{T}]]*Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
             Term { [ Norm[ Ns[]/Sc[]*{ir} ]]; In DomainS_Mag; Jacobian Vol; }
           } }
 
         { Name local_losses; Value {
-            Term { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
-            Term { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ]; In DomainS_Mag; Jacobian Vol; }
+            Term { [ 0.5*sigma[<T>[{T}]]*SquNorm[Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; }
+            Term { [ 0.5/sigma[<T>[{T}]]*SquNorm[Ns[]/Sc[]*{ir}] ]; In DomainS_Mag; Jacobian Vol; }
           }
         }
 
         { Name global_losses; Value {
-            Integral { [ 0.5*sigma[]*SquNorm[Dt[{a}]] ]   ; In DomainC_Mag  ; Jacobian Vol ; Integration I1 ; }
-            Integral { [ 0.5/sigma[]*SquNorm[Ns[]/Sc[]*{ir}] ] ; In DomainS_Mag  ; Jacobian Vol ; Integration I1 ; }
+            Integral { [ 0.5*sigma[<T>[{T}]]*SquNorm[Dt[{a}]] ]   ; In DomainC_Mag  ; Jacobian Vol ; Integration I1 ; }
+            Integral { [ 0.5/sigma[<T>[{T}]]*SquNorm[Ns[]/Sc[]*{ir}] ] ; In DomainS_Mag  ; Jacobian Vol ; Integration I1 ; }
           }
         }
 
@@ -946,14 +1015,36 @@ If (Flag_AnalysisType == 3)
             Term { Type Global ; [ I * F_Cos_wt_p[]{2*Pi*freq, Pa}] ; In WireConductor_1 ; }
           } 
         }
-
         { Name L_from_Energy ; Value { Term { Type Global; [ 2*$Wm/SquNorm[$current] ] ; In DomainDummy ; } } }
+        { Name JouleLosses;
+          Value {
+            Integral { [ 0.5 * sigma[<T>[{T}]] * SquNorm[Dt[{a}]] ]; In DomainC_Mag; Jacobian Vol; Integration I1; }
+            Integral { [ 0.5 * 1/sigma[<T>[{T}]] * SquNorm[Ns[]/Sc[]*{ir}] ]; In DomainS_Mag; Jacobian Vol; Integration I1; }
+          }
+        }
+        { Name T;
+          Value {
+            Term { [ {T} ]; In Domain_The; Jacobian Vol; }
+          }
+        }
+      }
+    }
+  }
+
+  PostProcessing {
+    { Name thermal_postpro; NameOfFormulation Thermal_T;
+      PostQuantity {
+        { Name T;
+          Value {
+            Term { [ {T} ]; In Domain_The; Jacobian Vol; }
+          }
+        }
       }
     }
   }
 
   PostOperation{
-    { Name Post_Mag; NameOfPostProcessing MQS_a_2D;
+    { Name Post_MagTherCoupled; NameOfPostProcessing MQS_a_2D;
       Operation {
         // local results
         Print[ az, OnElementsOf Domain_Mag,
@@ -966,15 +1057,19 @@ If (Flag_AnalysisType == 3)
           Name "jz [A/m^2]", File "res/jz_inds.pos" ];
         Print[ norm_j , OnElementsOf DomainC_Mag,
           Name "|j| [A/m^2]", File "res/jm.pos" ];
+        Print[ local_losses, OnElementsOf Domain_Mag,
+          Name "local losses [W/m^3]", File "res/local_losses.pos" ];
+        Print[ T, OnElementsOf Domain_The, 
+          Name "Temperature [°C]", File "res/T.pos" ];
 
         // global results
         Print[ global_losses[DomainC_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses conducting domain",
           Units "W/m", File "res/losses_total.dat" ];
-
         Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses source",
           Units "W/m", File "res/losses_inds.dat" ];
+
         Print[ R, OnRegion WireConductor_1, Format Table,
           SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
         Print[ L, OnRegion WireConductor_1, Format Table,
@@ -986,6 +1081,15 @@ If (Flag_AnalysisType == 3)
           SendToServer "{01Global MAG results/4Current", Units "I", File "res/I.dat" ];
         Print[ L_from_Energy, OnRegion DomainDummy, Format Table, StoreInVariable $L1,
           SendToServer "{01Global MAG results/5Inductance from energy", Units "H/m", File "res/L.dat" ];
+      }
+    }
+  }
+
+  PostOperation{ // use this guy to have T as real-value in the post-pro.
+    { Name Post_TherOnly; NameOfPostProcessing thermal_postpro;
+      Operation {
+        Print[ T, OnElementsOf Domain_The, 
+          Name "Temperature [°C]", File "res/T.pos" ];
       }
     }
   }
