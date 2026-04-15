@@ -15,6 +15,9 @@ import subprocess
 import gmsh
 import matplotlib.pyplot as plt
 
+plt.rcParams.update({"text.usetex": True, "font.family": "cm"})
+plt.rcParams.update({"font.size": 20})
+
 WORK_DIR = os.path.dirname(os.path.abspath(__file__))
 GEO_FILE = os.path.join(WORK_DIR, "cable.geo")
 PRO_FILE = os.path.join(WORK_DIR, "cable.pro")
@@ -38,7 +41,7 @@ MS_VALUES = [
 ]
 
 # Choose the analysis type: "electrodynamics" or "magnetodynamics"
-ANALYSIS = "magnetodynamics"
+ANALYSIS = "electrodynamics"
 
 # Per-analysis configuration: GetDP solve/post names and result files to collect.
 # Each entry in "results" maps a key to (dat_filename_in_res/, axis_label).
@@ -48,8 +51,8 @@ ANALYSIS_CONFIG = {
         "solve": "Electrodynamics",
         "post": "Post_Ele",
         "results": {
-            "energies": ("energy.dat", "Electric Energy [J/m]"),
-            "capacitances": ("C.dat", "Capacitance [F/m]"),
+            "energies": ("energy.dat", r"Electric Energy [J/m]"),
+            "capacitances": ("C.dat", r"Capacitance [F/m]"),
         },
         "title": "Electrodynamics",
     },
@@ -58,11 +61,11 @@ ANALYSIS_CONFIG = {
         "solve": "Magnetoquasistatics",
         "post": "Post_Mag",
         "results": {
-            "losses_total": ("losses_total.dat", "Total Losses [W/m]"),
-            "losses_inds": ("losses_inds.dat", "Source Losses [W/m]"),
-            "resistance": ("Rinds.dat", "Resistance [\u03a9/m]"),
-            "inductance": ("Linds.dat", "Inductance [H/m]"),
-            "mag_energy": ("MagEnergy.dat", "Magnetic Energy [J/m]"),
+            "losses_total": ("losses_total.dat", r"Total Losses [W/m]"),
+            "losses_inds": ("losses_inds.dat", r"Source Losses [W/m]"),
+            "resistance": ("Rinds.dat", r"Resistance [$\Omega$/m]"),
+            "inductance": ("Linds.dat", r"Inductance [H/m]"),
+            "mag_energy": ("MagEnergy.dat", r"Magnetic Energy [J/m]"),
         },
         "title": "Magnetodynamics",
     },
@@ -254,11 +257,7 @@ def plot(results_path):
     analysis = data.get("analysis", ANALYSIS)
     cfg = ANALYSIS_CONFIG[analysis]
     x = data.get("n_elements", data["ms"])
-    xlabel = (
-        "Number of elements   (coarse  ←  →  fine)"
-        if "n_elements" in data
-        else "Mesh size parameter ms   (coarse  ←  →  fine)"
-    )
+    xlabel = r"\# of elements" if "n_elements" in data else r"Mesh size parameter $m_s$"
     result_keys = cfg["results"]
 
     n = len(result_keys)
@@ -278,11 +277,62 @@ def plot(results_path):
 
     axes[-1].set_xlabel(xlabel)
     fig.suptitle(
-        f"Mesh Convergence Study — {cfg['title']}", fontsize=13, fontweight="bold"
+        rf"Mesh Convergence Study --- {cfg['title']}", fontsize=13, fontweight="bold"
     )
     plt.tight_layout()
 
     out_pdf = os.path.join(os.path.dirname(results_path), "convergence_study.pdf")
+    plt.savefig(out_pdf, bbox_inches="tight")
+    print(f"Plot saved → {out_pdf}")
+
+
+def plot_electrodynamics_energy_comparison():
+    """
+    Single plot of electric energy relative change vs. number of elements
+    for the three electrodynamics runs (e5, e6, e7, e8), one line each.
+    """
+    variants = {
+        "e5": r"$\sigma_{\mathrm{HDPE}} = 10^{-5}$",
+        "e6": r"$\sigma_{\mathrm{HDPE}} = 10^{-6}$",
+        "e7": r"$\sigma_{\mathrm{HDPE}} = 10^{-7}$",
+        # "e8": r"$\sigma_{\mathrm{HDPE}} = 10^{-8}$",
+    }
+    _, ax = plt.subplots(figsize=(9, 5))
+
+    for variant, label in variants.items():
+        results_path = os.path.join(
+            WORK_DIR, f"convergence_results_electrodynamics_{variant}", "results.json"
+        )
+        try:
+            with open(results_path) as f:
+                data = json.load(f)
+        except Exception as e:
+            continue
+
+        x_all = data.get("n_elements", data["ms"])
+        values = data["energies"]
+        x_mid = x_all[1:]
+        rel_changes = [
+            100 * (values[i] - values[i - 1]) / values[i - 1]
+            for i in range(1, len(values))
+        ]
+        ax.plot(x_mid, rel_changes, "o-", linewidth=1, markersize=7, label=label)
+
+    ax.invert_xaxis()
+    ax.set_xlabel(r"\# of elements")
+    ax.set_ylabel(r"Relative change [\%]")
+    ax.legend()
+    ax.grid(True, alpha=0.5, linestyle="--", color="gray")
+    if LOG_SCALE_X:
+        ax.set_xscale("log")
+    if LOG_SCALE_Y:
+        ax.set_yscale("log")
+
+    plt.tight_layout()
+
+    out_pdf = os.path.join(
+        WORK_DIR, "convergence_electrodynamics_energy_comparison.pdf"
+    )
     plt.savefig(out_pdf, bbox_inches="tight")
     print(f"Plot saved → {out_pdf}")
 
@@ -298,11 +348,7 @@ def plot_relative_change(results_path):
     analysis = data.get("analysis", ANALYSIS)
     cfg = ANALYSIS_CONFIG[analysis]
     x_all = data.get("n_elements", data["ms"])
-    xlabel = (
-        "Number of elements   (coarse  ←  →  fine)"
-        if "n_elements" in data
-        else "Mesh size parameter ms   (coarse  ←  →  fine)"
-    )
+    xlabel = r"\# of elements" if "n_elements" in data else r"Mesh size parameter $m_s$"
     result_keys = cfg["results"]
 
     # x-axis: the finer point of each consecutive pair
@@ -320,7 +366,7 @@ def plot_relative_change(results_path):
 
     ax.invert_xaxis()
     ax.set_xlabel(xlabel)
-    ax.set_ylabel("Relative change [%]")
+    ax.set_ylabel(r"Relative change [\%]")
     ax.legend()
     ax.grid(True, alpha=0.5, linestyle="--", color="gray")
     if LOG_SCALE_X:
@@ -350,3 +396,4 @@ if __name__ == "__main__":
 
     plot(RESULTS_FILE)
     plot_relative_change(RESULTS_FILE)
+    plot_electrodynamics_energy_comparison()
