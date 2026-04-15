@@ -305,6 +305,7 @@ If (Flag_AnalysisType == 0)
 
         { Name j ; Value { Term { [ -sigma[] * {d v} ] ; In domain_ele ; Jacobian Vol; } } }
         { Name j_displ; Value { Term { [ -epsilon[] * {d v} * Complex[0, 1] * omega ]; In domain_ele; Jacobian Vol; } } }
+        { Name j_tot; Value { Term { [ -sigma[] * {d v} -epsilon[] * {d v} * Complex[0, 1] * omega ]; In domain_ele; Jacobian Vol; } } }
         { Name norm_j ; Value { Term { [ Norm[-sigma[] * {d v}] ] ; In domain_ele ; Jacobian Vol; } } }
 
         { Name ElectricEnergy; Value {
@@ -332,8 +333,8 @@ If (Flag_AnalysisType == 0)
         Print[ norm_d, OnElementsOf domain_ele, Name "|D| [A/mÂ²]", File "res/dm.pos" ];
         Print[ j, OnElementsOf domain_ele, Name "j [A/mÂ²]", File "res/j.pos" ];
         Print[ j_displ, OnElementsOf domain_ele, Name "j_displ [A/mÂ²]", File "res/j_displ.pos" ];
+        Print[ j_tot, OnElementsOf domain_ele, Name "j_tot [A/mÂ²]", File "res/j_tot.pos" ];
         Print[ e,  OnElementsOf domain_ele, Name "E [V/m]",  File "res/e.pos" ];
-
         Print[ ElectricEnergy[domain_ele], OnGlobal, Format Table, StoreInVariable $We,
           SendToServer "{01Global ELE results/0Electric energy", File "res/energy.dat" ];
         Print[ V0, OnRegion WireConductor_1, Format Table, StoreInVariable $voltage,
