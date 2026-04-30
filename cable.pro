@@ -108,7 +108,7 @@ Group {
 Function {
   mu0 = 4.e-7 * Pi;
   eps0 = 8.854187818e-12;
-  mur_steel = 4;
+  mur_steel = 2;
   sigma_insulator = 1e-6; // conductivity of HDPE
 
   If(Flag_AnalysisType == 3)
@@ -129,8 +129,11 @@ Function {
   sigma[Ground] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
   sigma[GroundInf] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
 
-  epsilon[Region[{Ground, GroundInf, WireConductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableArmor, CableOuterSheath}]] = eps0;
-  epsilon[Region[{WireSemiconductor}]] = eps0*2.25;
+  epsilon[Region[{Ground, GroundInf}]] = eps0 * 30;
+  epsilon[Region[{WireInsulation, CableInsulationInside, CableInsulationAround}]] = eps0 * 2.5;
+  epsilon[Region[{WireHDPESheath, CableOuterSheath}]] = eps0 * 2.3;
+  epsilon[Region[{WireSemiconductor, CableSemiconductor}]] = eps0 * ;
+  epsilon[Region[{WireConductor, WireLeadSheath, CableArmor}]] = eps0 * 1;
 
   nu[Region[{Ground, GroundInf, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
@@ -138,18 +141,17 @@ Function {
   T0[] = 7; // sea bottom temperature near coast [°C] https://www.yr.no/en/coast/forecast/0-722/Norway/Martin%20Linge%20A
 
   k[WireConductor]       = 401;   // copper [W/m/K]
-  k[WireSemiconductor]   = 0.32;   // semiconducting XLPE+carbon black [W/m/K] 
-  k[WireInsulation]      = 0.32; // XLPE [W/m/K] https://www.sciencedirect.com/science/article/pii/S0040603122000879
-  k[WireLeadSheath]      = 45;    // lead [W/m/K]
+  k[WireSemiconductor]   = 0.4;   // semiconducting XLPE+carbon black [W/m/K] 
+  k[WireInsulation]      = 0.4; // XLPE [W/m/K] https://www.sciencedirect.com/science/article/pii/S0040603122000879
+  k[WireLeadSheath]      = 50.7;    // lead [W/m/K]
   k[WireHDPESheath]      = 0.45;   // HDPE [W/m/K] https://en.wikipedia.org/wiki/List_of_thermal_conductivities
-  k[CableInsulationInside]  = 0.32; // filler (PP/XLPE) [W/m/K]
-  k[CableInsulationAround]  = 0.32; // filler (PP/XLPE) [W/m/K]
-  k[CableSemiconductor]     = 0.32; // semiconducting layer [W/m/K]
+  k[CableInsulationInside]  = 0.4; // filler (XLPE) [W/m/K]
+  k[CableInsulationAround]  = 0.4; // filler (XLPE) [W/m/K]
+  k[CableSemiconductor]     = 0.4; // semiconducting layer [W/m/K]
   k[CableArmor]          = 65;    // galvanized steel [W/m/K] https://www.researchgate.net/figure/Physical-properties-of-galvanized-steel_tbl1_328957879
   k[CableOuterSheath]    = 0.45;   // HDPE [W/m/K]
 
   k_sand = 2;       // thermal conductivity of saturated marine sand [W/m/K] https://www.issmge.org/uploads/publications/132/133/ISFOG2025-77.pdf
-  d_burial = 2.0;     // burial depth [m]
   k[Ground] = k_sand;
   k[GroundInf] = k_sand;
   h[] = k_sand; // effective conduction BC coefficient [W/m²/K]
