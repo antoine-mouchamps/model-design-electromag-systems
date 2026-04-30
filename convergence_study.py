@@ -241,7 +241,7 @@ def run_sweep():
     }
     with open(RESULTS_FILE, "w") as f:
         json.dump(data, f, indent=2)
-    print(f"\nResults saved → {RESULTS_FILE}")
+    print(f"\nResults saved -> {RESULTS_FILE}")
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +283,7 @@ def plot(results_path):
 
     out_pdf = os.path.join(os.path.dirname(results_path), "convergence_study.pdf")
     plt.savefig(out_pdf, bbox_inches="tight")
-    print(f"Plot saved → {out_pdf}")
+    print(f"Plot saved -> {out_pdf}")
 
 
 def plot_electrodynamics_energy_comparison():
@@ -318,6 +318,11 @@ def plot_electrodynamics_energy_comparison():
         ]
         ax.plot(x_mid, rel_changes, "o-", linewidth=1, markersize=7, label=label)
 
+    if not ax.lines:
+        plt.close()
+        print("plot_electrodynamics_energy_comparison: no variant data found, skipping.")
+        return
+
     ax.invert_xaxis()
     ax.set_xlabel(r"\# of elements")
     ax.set_ylabel(r"Relative change [\%]")
@@ -334,7 +339,7 @@ def plot_electrodynamics_energy_comparison():
         WORK_DIR, "convergence_electrodynamics_energy_comparison.pdf"
     )
     plt.savefig(out_pdf, bbox_inches="tight")
-    print(f"Plot saved → {out_pdf}")
+    print(f"Plot saved -> {out_pdf}")
 
 
 def plot_relative_change(results_path):
@@ -380,7 +385,7 @@ def plot_relative_change(results_path):
         os.path.dirname(results_path), "convergence_relative_change.pdf"
     )
     plt.savefig(out_pdf, bbox_inches="tight")
-    print(f"Plot saved → {out_pdf}")
+    print(f"Plot saved -> {out_pdf}")
 
 
 # ---------------------------------------------------------------------------
