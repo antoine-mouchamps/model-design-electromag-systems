@@ -57,9 +57,12 @@ Group {
   Ground = Region[{6}];
   GroundInf = Region[{7}];
 
+  Defect = Region[{999}];
+
   // electrodynamics
   surrounding_dirichlet_ele = Region[{1011}];
   domain_ele = Region[ {
+    Defect,
     GroundInf,
     Ground,
     WireConductor,
@@ -111,6 +114,8 @@ Function {
   mur_steel = 2;
   sigma_insulator = 1e-6; // conductivity of HDPE
 
+  sigma[Defect] = 4.8; // seawater
+
   If(Flag_AnalysisType == 3)
     sigma[WireConductor] = 5.96e7 / (1 + 0.00386 * ($1 - 20));
   Else
@@ -134,6 +139,7 @@ Function {
   epsilon[Region[{WireHDPESheath, CableOuterSheath}]] = eps0 * 2.3;
   epsilon[Region[{WireSemiconductor, CableSemiconductor}]] = eps0 * ;
   epsilon[Region[{WireConductor, WireLeadSheath, CableArmor}]] = eps0 * 1;
+  epsilon[Defect] = eps0 * 80; // seawater
 
   nu[Region[{Ground, GroundInf, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
