@@ -137,7 +137,7 @@ Function {
   epsilon[Region[{Ground, GroundInf}]] = eps0 * 30;
   epsilon[Region[{WireInsulation, CableInsulationInside, CableInsulationAround}]] = eps0 * 2.5;
   epsilon[Region[{WireHDPESheath, CableOuterSheath}]] = eps0 * 2.3;
-  epsilon[Region[{WireSemiconductor, CableSemiconductor}]] = eps0 * ;
+  epsilon[Region[{WireSemiconductor, CableSemiconductor}]] = eps0 * 20;
   epsilon[Region[{WireConductor, WireLeadSheath, CableArmor}]] = eps0 * 1;
   epsilon[Defect] = eps0 * 80; // seawater
 
