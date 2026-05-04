@@ -41,7 +41,7 @@ MS_VALUES = [
 ]
 
 # Choose the analysis type: "electrodynamics" or "magnetodynamics"
-ANALYSIS = "electrodynamics"
+ANALYSIS = "magnetodynamics"
 
 # Per-analysis configuration: GetDP solve/post names and result files to collect.
 # Each entry in "results" maps a key to (dat_filename_in_res/, axis_label).
@@ -268,7 +268,6 @@ def plot(results_path):
     for ax, (key, (_, label)) in zip(axes, result_keys.items()):
         ax.plot(x, data[key], "o-", linewidth=1, markersize=8)
         ax.set_ylabel(label)
-        ax.invert_xaxis()
         ax.grid(True, alpha=0.5, linestyle="--", color="gray")
         if LOG_SCALE_X:
             ax.set_xscale("log")
@@ -323,7 +322,6 @@ def plot_electrodynamics_energy_comparison():
         print("plot_electrodynamics_energy_comparison: no variant data found, skipping.")
         return
 
-    ax.invert_xaxis()
     ax.set_xlabel(r"\# of elements")
     ax.set_ylabel(r"Relative change [\%]")
     ax.legend()
@@ -369,7 +367,6 @@ def plot_relative_change(results_path):
         ]
         ax.plot(x_mid, rel_changes, "o-", linewidth=1, markersize=7, label=label)
 
-    ax.invert_xaxis()
     ax.set_xlabel(xlabel)
     ax.set_ylabel(r"Relative change [\%]")
     ax.legend()
