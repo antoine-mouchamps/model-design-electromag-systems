@@ -1,17 +1,5 @@
 Include "cable_common.pro";
 
-DefineConstant[
-  Flag_AnalysisType = {0,
-    Choices{
-      0="Electrodynamic",
-      1="Magnetoquasistatic",
-      2="Magneto-thermal",
-      3="Magneto-thermal-coupled"
-    },
-    Name "{00FE param./Type of analysis", Highlight "ForestGreen",
-    ServerAction Str["Reset", StrCat[ "GetDP/1ResolutionChoices", ",", "GetDP/2PostOperationChoices"]] }
-];
-
 Function{
   Resolution_name() = Str['Electrodynamics', 'Magnetoquasistatics', 'Magnetothermal', 'Magnetothermalcoupled'];
   PostOperation_name() = Str['Post_Ele', 'Post_Mag', 'Post_MagTher', 'Post_MagTherCoupled'];
