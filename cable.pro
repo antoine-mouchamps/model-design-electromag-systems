@@ -80,7 +80,7 @@ Group {
   } ];
 
   // Magnetoquasistatics
-  Sur_Dirichlet_Mag = Region[{50}];
+  surrounding_dirichlet_mag = Region[{50}];
   DomainS_Mag       = Region[{WireConductor}];
 
   DomainNC_Mag  = Region[{GroundInf, Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
@@ -90,8 +90,8 @@ Group {
   DomainDummy = Region[123474982982]; //postpro
 
   // Magneto-Thermal
-  // Sur_Rob_The = Region[{1011}]; // Infinite boundary (r_domain_inf)
-  Sur_Rob_The = Region[{1012}]; // Stop at r_domain boundary
+  // surrounding_robin_the = Region[{1011}]; // Infinite boundary (r_domain_inf)
+  surrounding_robin_the = Region[{1012}]; // Stop at r_domain boundary
 
   Domain_The = Region[{
     WireConductor,
@@ -106,7 +106,7 @@ Group {
     CableOuterSheath,
     // GroundInf,
     Ground,
-    Sur_Rob_The
+    surrounding_robin_the
   }];
 }
 
@@ -198,7 +198,7 @@ Constraint {
   // Magnetic constraints
   { Name MagneticVectorPotential;
     Case {
-      { Region Sur_Dirichlet_Mag; Value 0.; }
+      { Region surrounding_dirichlet_mag; Value 0.; }
     }
   }
 
@@ -637,7 +637,7 @@ If (Flag_AnalysisType == 2)
       }
       Equation {
         Integral { [ k[] * Dof{d T} , {d T} ];
-          In Region[{Domain_The, -Sur_Rob_The}]; Jacobian Vol; Integration I1; }
+          In Region[{Domain_The, -surrounding_robin_the}]; Jacobian Vol; Integration I1; }
 
         // The "<a>[ ... ]" syntax instructs GetDP to evaluate the expression
         // inside in complex arithmetic, even though the thermal formulation is
@@ -651,9 +651,9 @@ If (Flag_AnalysisType == 2)
             {T} ]; In DomainS_Mag; Jacobian Vol; Integration I1; }
 
         Integral { [ h[] * Dof{T} , {T} ];
-          In Sur_Rob_The; Jacobian Sur; Integration I1; }
+          In surrounding_robin_the; Jacobian Sur; Integration I1; }
         Integral { [ -h[] * T0[] , {T} ];
-          In Sur_Rob_The; Jacobian Sur; Integration I1; }
+          In surrounding_robin_the; Jacobian Sur; Integration I1; }
       }
     }
   }
@@ -915,7 +915,7 @@ If (Flag_AnalysisType == 3)
       }
       Equation {
         Integral { [ k[] * Dof{d T} , {d T} ];
-          In Region[{Domain_The, -Sur_Rob_The}]; Jacobian Vol; Integration I1; }
+          In Region[{Domain_The, -surrounding_robin_the}]; Jacobian Vol; Integration I1; }
 
         // The "<a>[ ... ]" syntax instructs GetDP to evaluate the expression
         // inside in complex arithmetic, even though the thermal formulation is
@@ -929,9 +929,9 @@ If (Flag_AnalysisType == 3)
             {T} ]; In DomainS_Mag; Jacobian Vol; Integration I1; }
 
         Integral { [ h[] * Dof{T} , {T} ];
-          In Sur_Rob_The; Jacobian Sur; Integration I1; }
+          In surrounding_robin_the; Jacobian Sur; Integration I1; }
         Integral { [ -h[] * T0[] , {T} ];
-          In Sur_Rob_The; Jacobian Sur; Integration I1; }
+          In surrounding_robin_the; Jacobian Sur; Integration I1; }
       }
     }
   }
