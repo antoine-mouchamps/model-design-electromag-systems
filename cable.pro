@@ -114,7 +114,7 @@ Function {
   mu0 = 4.e-7 * Pi;
   eps0 = 8.854187818e-12;
   mur_steel = 2;
-  sigma_insulator = 1e-6; // conductivity of HDPE
+  sigma_insulator = 1e-5; // conductivity of HDPE
 
   sigma[Defect] = 4.8; // seawater
 
@@ -130,7 +130,7 @@ Function {
 
   sigma[CableInsulationInside] = sigma_insulator;
   sigma[CableInsulationAround] = sigma_insulator;
-  sigma[CableSemiconductor] = sigma_insulator;
+  sigma[CableSemiconductor] = sigma_insulator; // should have been semiconductor, but leads to unrealistic results
   sigma[CableArmor] = 4.7e6; // Value from simpleCable.pro for galvanized/tensile steel
   sigma[CableOuterSheath] = sigma_insulator;
   sigma[Ground] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
@@ -138,8 +138,8 @@ Function {
 
   epsilon[Region[{Ground, GroundInf}]] = eps0 * 30;
   epsilon[Region[{WireInsulation, CableInsulationInside, CableInsulationAround}]] = eps0 * 2.5;
-  epsilon[Region[{WireHDPESheath, CableOuterSheath}]] = eps0 * 2.3;
-  epsilon[Region[{WireSemiconductor, CableSemiconductor}]] = eps0 * 20;
+  epsilon[Region[{WireHDPESheath, CableOuterSheath, CableSemiconductor}]] = eps0 * 2.3;
+  epsilon[Region[{WireSemiconductor}]] = eps0 * 20;
   epsilon[Region[{WireConductor, WireLeadSheath, CableArmor}]] = eps0 * 1;
   epsilon[Defect] = eps0 * 80; // seawater
 
