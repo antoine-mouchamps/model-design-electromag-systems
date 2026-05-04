@@ -18,6 +18,8 @@ Function{
 }
 
 DefineConstant[
+  freq = {50, Min 0, Max 999999, Step 1,
+    Name "{00FE param./Frequency [Hz]", Label "Frequency [Hz]"},
   r_ = {Str[Resolution_name(Flag_AnalysisType)], Name "GetDP/1ResolutionChoices"}
   c_ = {"-solve -v2 -pos", Name "GetDP/9ComputeCommand"},
   p_ = {Str[PostOperation_name(Flag_AnalysisType)], Name "GetDP/2PostOperationChoices"}
@@ -167,7 +169,6 @@ Function {
   NL_tol_rel = 1e-6;
   NL_iter_max = 20;
 
-  freq = 50;
   omega = 2*Pi*freq;
 
   Pa = 0.; Pb = -120./180.*Pi; Pc = -240./180.*Pi;
