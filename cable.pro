@@ -519,15 +519,19 @@ If (Flag_AnalysisType == 1)
           Name "jz [A/m^2]", File "res/jz_inds.pos" ];
         Print[ norm_j , OnElementsOf DomainC_Mag,
           Name "|j| [A/m^2]", File "res/jm.pos" ];
+        Print[ local_losses , OnElementsOf Region[{DomainC_Mag, DomainS_Mag}],
+          Name "local losses [W/m^3]", File "res/losses_inds.pos" ];
 
         // global results
         Print[ global_losses[DomainC_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses conducting domain",
           Units "W/m", File "res/losses_total.dat" ];
-
         Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses source",
           Units "W/m", File "res/losses_inds.dat" ];
+        Print[ global_losses[Region[{DomainC_Mag, DomainS_Mag}]], OnGlobal, Format Table,
+          SendToServer "{01Global MAG results/0Losses total",
+          Units "W/m", File "res/losses_all.dat" ];
         Print[ R, OnRegion WireConductor_1, Format Table,
           SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
         Print[ L, OnRegion WireConductor_1, Format Table,
@@ -797,6 +801,9 @@ If (Flag_AnalysisType == 2)
         Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses source",
           Units "W/m", File "res/losses_inds.dat" ];
+        Print[ global_losses[Region[{DomainC_Mag, DomainS_Mag}]], OnGlobal, Format Table,
+          SendToServer "{01Global MAG results/0Losses total",
+          Units "W/m", File "res/losses_all.dat" ];
 
         Print[ R, OnRegion WireConductor_1, Format Table,
           SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
@@ -1094,6 +1101,9 @@ If (Flag_AnalysisType == 3)
         Print[ global_losses[DomainS_Mag], OnGlobal, Format Table,
           SendToServer "{01Global MAG results/0Losses source",
           Units "W/m", File "res/losses_inds.dat" ];
+        Print[ global_losses[Region[{DomainC_Mag, DomainS_Mag}]], OnGlobal, Format Table,
+          SendToServer "{01Global MAG results/0Losses total",
+          Units "W/m", File "res/losses_all.dat" ];
 
         Print[ R, OnRegion WireConductor_1, Format Table,
           SendToServer "{01Global MAG results/1Resistance", Units "Î©/m", File "res/Rinds.dat" ];
