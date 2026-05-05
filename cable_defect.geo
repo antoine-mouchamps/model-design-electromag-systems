@@ -93,25 +93,24 @@ For i In {1:3}
 EndFor
 
 // ==========================================================================
-// Defect: vertical elliptical cut from the outer cable surface into phase 1 insulation
-// Penetrates: cable_outer → cable_armor → cable_semiconductor → cable_insulator
-//             → hdpe_sheath_1 → lead_sheath_1 → 1/4 through insulation_1
+// Defect: elliptical cut breaching cable_outer, cable_armor, and ~half of cable_semiconductor
 // ==========================================================================
-defect_a = 50*mm;  // horizontal semi-axis (half-width of cut)
-// Vertical semi-axis: from outer surface down to 1/4 through phase 1 insulation
-// At the top (x=0): phase 1 insulation outer boundary is at y = y0 + r_phase_cable_with_insulation
-defect_depth_total = r_cable_outer
-                   - (y0 + r_phase_cable_outer-(hdpe_sheath_thickness/2));  // depth from outer cable surface down to phase 1 insulation;
+defect_a = 50*mm;  // horizontal semi-axis
+
+// Bottom of the armor (at x=0): y = r_cable_outer - outer_sheath_cable - steel_wire_armour_thickness
+// Bottom of cable_semiconductor (at x=0): y = radius (circumscribed circle around the 3 phases)
+// Target: midpoint between those two → halfway through cable_semiconductor
+r_armor_inner = r_cable_outer - outer_sheath_cable - steel_wire_armour_thickness;
+r_semi_inner  = r_phase_cable_outer * (1 + (2/Sqrt(3)));  // = radius variable
+defect_bottom = (r_armor_inner + r_semi_inner) / 2;
+defect_depth_total = r_cable_outer - defect_bottom;
 
 // Full ellipse centered on the outer cable surface at the top.
-// OpenCASCADE requires rx >= ry (major axis first).
 defect_ell_full = newreg;
 If (defect_depth_total >= defect_a)
-  // Tall narrow ellipse: major axis is the depth → swap and rotate 90° to make it vertical
   Disk(defect_ell_full) = {0, r_cable_outer, 0, defect_depth_total, defect_a};
   Rotate {{0, 0, 1}, {0, r_cable_outer, 0}, Pi/2} { Surface{defect_ell_full}; }
 Else
-  // Wide flat ellipse: major axis is already the horizontal width → no rotation needed
   Disk(defect_ell_full) = {0, r_cable_outer, 0, defect_a, defect_depth_total};
 EndIf
 
@@ -119,10 +118,6 @@ EndIf
 cable_outer()         = BooleanDifference{ Surface{cable_outer()};         Delete; }{ Surface{defect_ell_full}; };
 cable_armor()         = BooleanDifference{ Surface{cable_armor()};         Delete; }{ Surface{defect_ell_full}; };
 cable_semiconductor() = BooleanDifference{ Surface{cable_semiconductor()}; Delete; }{ Surface{defect_ell_full}; };
-cable_insulator()     = BooleanDifference{ Surface{cable_insulator()};     Delete; }{ Surface{defect_ell_full}; };
-hdpe_sheath~{1}()     = BooleanDifference{ Surface{hdpe_sheath~{1}()};     Delete; }{ Surface{defect_ell_full}; };
-lead_sheath~{1}()     = BooleanDifference{ Surface{lead_sheath~{1}()};     Delete; }{ Surface{defect_ell_full}; };
-insulation~{1}()      = BooleanDifference{ Surface{insulation~{1}()};      Delete; }{ Surface{defect_ell_full}; };
 
 // Clip the ellipse to the interior of the cable (Disk 3 = r_cable_outer circle).
 // This keeps only the part inside the cable and discards the upper half that
@@ -237,6 +232,11 @@ Physical Line("bnd_domain",     1012) = outer_ground_arcs();
 Physical Line("bnd_outer_cable",1013) = inner_ground_arcs();
 
 bnd_cable_armor[] = Boundary{Surface{cable_armor()};};
+// loop over bnd_cable_armor and print its id + add a physical line for each
+// For i In {0:#bnd_cable_armor[]-1}
+//     Printf("bnd_cable_armor(%g) = %g", i, bnd_cable_armor(i));
+//     Physical Line(Sprintf("bnd_cable_armor_%g", i), 900000 + i) = {bnd_cable_armor(i)};
+// EndFor
 Physical Line("bnd_cable_armor_outer", 1014) = {bnd_cable_armor(0), bnd_cable_armor(5)};
 Physical Line("bnd_cable_armor_inner", 1016) = {bnd_cable_armor(2), bnd_cable_armor(3)};
 bnd_cable_semiconductor[] = Boundary{Surface{cable_semiconductor()};};
@@ -245,16 +245,16 @@ bnd_cable_semiconductor[] = Boundary{Surface{cable_semiconductor()};};
 // Mesh size
 // ==========================================================================
 
-
-// DefineConstant[ ms = {r_cable_outer, Name "Mesh size", Visible 1} ];
-// ms = DefineNumber[1, Min 1e-3, Max 3, Step 1e-3, Name "Mesh size"];
-DefineConstant[
-  ms = {1, Min 0.01, Max 3, Name "Mesh size", Visible 1}
-];
-Printf("Mesh size (ms) = %g", ms);
-
+bnd_defect[] = Boundary{Surface{defect_surfaces()};};
+// For i In {0:#bnd_defect[]-1}
+//     Printf("bnd_defect(%g) = %g", i, bnd_defect(i));
+//     Physical Line(Sprintf("bnd_defect_%g", i), 900000 + i) = {bnd_defect(i)};
+// EndFor
+MeshSize {PointsOf{Line{bnd_defect(0), bnd_defect(2), bnd_defect(4),bnd_defect(6), bnd_defect(8)};}} = ms/2;  // finer mesh on defect boundary
 MeshSize {PointsOf{Line{bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};}} = ms/50;
-MeshSize {PointsOf{Line{bnd_cable_armor(2), bnd_cable_armor(3)};}} = ms/225; // inner armor boundary
+MeshSize {PointsOf{Line{bnd_cable_armor(2), bnd_cable_armor(3)};}} = ms/500; // inner armor boundary
+// Transfinite Curve {bnd_cable_armor(2)} = 35/ms Using Bump 0.05;
+// Transfinite Curve {bnd_cable_armor(3)} = 35/ms Using Bump 0.05;
 MeshSize {PointsOf{Line{bnd_cable_armor(0), bnd_cable_armor(5)};}} = ms/150; // outer armor boundary
 MeshSize {PointsOf{Line{inner_ground_arcs()};}}     = ms/100; // r_cable_outer arcs
 MeshSize {PointsOf{Line{outer_ground_arcs()};}}     = ms/80;  // r_domain arcs
