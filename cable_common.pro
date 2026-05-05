@@ -18,6 +18,12 @@ DefineConstant[
     ServerAction Str["Reset", StrCat[ "GetDP/1ResolutionChoices", ",", "GetDP/2PostOperationChoices"]] }
 ];
 
+DefineConstant[
+  Flag_Defect = {0,
+    Choices{0="No defect", 1="With defect"},
+    Name "{00FE param./Defect", Highlight "Red"}
+];
+
 scale_mesh_ground = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1 : 0.1;
 r_domain = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1.2*r_cable_outer : r_cable_outer + 1;
 r_domain_inf = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1.5*r_domain : 1.05*r_domain;
