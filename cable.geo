@@ -129,18 +129,11 @@ Physical Line("bnd_cable_armor_outer", 1014) = {bnd_cable_armor(0)};
 Physical Line("bnd_cable_armor_inner", 1015) = {bnd_cable_armor(1)};
 
 bnd_cable_semiconductor[] = Boundary{Surface{cable_semiconductor()};};
-// Physical Line("bnd_cable_semiconductor_inner", 1015) = {bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};
 
 // ==========================================================================
 // Mesh size
 // ==========================================================================
 
-
-// DefineConstant[ ms = {r_cable_outer, Name "Mesh size", Visible 1} ];
-// ms = DefineNumber[1, Min 1e-3, Max 3, Step 1e-3, Name "Mesh size"];
-DefineConstant[
-  ms = {1, Min 0.01, Max 3, Name "Mesh size", Visible 1}
-];
 Printf("Mesh size (ms) = %g", ms);
 
 MeshSize {PointsOf{Line{bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), bnd_cable_semiconductor(3)};}} = ms/50;
