@@ -1,6 +1,7 @@
 # list of ignored files/folders
 *.drawio.*
 res/*
+results/*
 
 build/
 */math0471-mpip-main/
