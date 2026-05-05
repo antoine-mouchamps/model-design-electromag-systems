@@ -270,15 +270,15 @@ MeshSize {PointsOf{Line{bnd_cable_semiconductor(1), bnd_cable_semiconductor(2), 
 
 If(Flag_Defect)
   bnd_defect[] = Boundary{Surface{defect_surfaces()};};
-  MeshSize {PointsOf{Line{bnd_defect(0), bnd_defect(2), bnd_defect(4),bnd_defect(6), bnd_defect(8)};}} = ms/2;
-  MeshSize {PointsOf{Line{bnd_cable_armor(2), bnd_cable_armor(3)};}} = ms/500; // inner armor boundary
-  MeshSize {PointsOf{Line{bnd_cable_armor(0), bnd_cable_armor(5)};}} = ms/150; // outer armor boundary
+  MeshSize {PointsOf{Line{bnd_defect()};}} = ms/100;
+  MeshSize {PointsOf{Line{bnd_cable_armor(2), bnd_cable_armor(3)};}} = ms/150; // inner armor boundary
+  MeshSize {PointsOf{Line{bnd_cable_armor(0), bnd_cable_armor(5)};}} = ms/225; // outer armor boundary
   MeshSize {PointsOf{Line{inner_ground_arcs()};}}     = ms/100;
   MeshSize {PointsOf{Line{outer_ground_arcs()};}}     = ms/(80*scale_mesh_ground);
   MeshSize {PointsOf{Line{outer_ground_inf_arcs()};}} = ms/(50*scale_mesh_ground);
 Else
   MeshSize {PointsOf{Line{bnd_cable_armor(1)};}} = ms/150; // inner armor boundary
-  MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/225; // outer armor boundary
+  MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/125; // outer armor boundary
   MeshSize {PointsOf{Line{bnd_ground(1)};}} = ms/100;
   MeshSize {PointsOf{Line{bnd_ground(0)};}} = ms/(80*scale_mesh_ground);
   MeshSize {PointsOf{Line{bnd_ground_inf(0)};}} = ms/(50*scale_mesh_ground);
@@ -295,11 +295,7 @@ EndFor
 // Apply Transfinite
 For i In {1:3}
     For j In {0:#bnd_cable_insulator~{i}()-1}
-        If (Flag_Defect && ((i == 3 && j == 0) || (i == 1 && j == 1)))
-            MeshSize {PointsOf{Line{bnd_cable_insulator~{i}(j)};}} = ms/700;
-        Else
-            Transfinite Curve {bnd_cable_insulator~{i}(j)} = 50/ms Using Bump 0.05;
-        EndIf
+        Transfinite Curve {bnd_cable_insulator~{i}(j)} = 50/ms Using Bump 0.05;
     EndFor
 EndFor
 Transfinite Curve {bnd_cable_insulator_inside()} = 35/ms Using Bump 0.05;
