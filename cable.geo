@@ -277,8 +277,8 @@ If(Flag_Defect)
   MeshSize {PointsOf{Line{outer_ground_arcs()};}}     = ms/(80*scale_mesh_ground);
   MeshSize {PointsOf{Line{outer_ground_inf_arcs()};}} = ms/(50*scale_mesh_ground);
 Else
-  MeshSize {PointsOf{Line{bnd_cable_armor(1)};}} = ms/225; // inner armor boundary
-  MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/150; // outer armor boundary
+  MeshSize {PointsOf{Line{bnd_cable_armor(1)};}} = ms/150; // inner armor boundary
+  MeshSize {PointsOf{Line{bnd_cable_armor(0)};}} = ms/225; // outer armor boundary
   MeshSize {PointsOf{Line{bnd_ground(1)};}} = ms/100;
   MeshSize {PointsOf{Line{bnd_ground(0)};}} = ms/(80*scale_mesh_ground);
   MeshSize {PointsOf{Line{bnd_ground_inf(0)};}} = ms/(50*scale_mesh_ground);
