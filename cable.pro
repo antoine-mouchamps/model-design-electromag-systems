@@ -72,7 +72,7 @@ Group {
   DomainS_Mag       = Region[{WireConductor}];
 
   DomainNC_Mag  = Region[{GroundInf, Ground, WireConductor, WireSemiconductor, WireInsulation, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath} ]; // non-conducting regions
-  DomainC_Mag   = Region[{WireLeadSheath, CableArmor}]; //conducting regions
+  DomainC_Mag   = Region[{WireLeadSheath, CableArmor, Defect}]; //conducting regions
   Domain_Mag = Region[{DomainNC_Mag, DomainC_Mag}];
 
   DomainDummy = Region[123474982982]; //postpro
@@ -131,10 +131,17 @@ Function {
   epsilon[Region[{WireConductor, WireLeadSheath, CableArmor}]] = eps0 * 1;
   epsilon[Defect] = eps0 * 80; // seawater
 
-  nu[Region[{Ground, GroundInf, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
+  nu[Region[{Defect, Ground, GroundInf, WireConductor, WireSemiconductor, WireInsulation, WireLeadSheath, WireHDPESheath, CableInsulationInside, CableInsulationAround, CableSemiconductor, CableOuterSheath}]]  = 1./mu0;
   nu[Region[{CableArmor}]]  = 1./(mu0*mur_steel);
 
-  T0[] = 7; // sea bottom temperature near coast [°C] https://www.yr.no/en/coast/forecast/0-722/Norway/Martin%20Linge%20A
+  If(Flag_AnalysisType == 2 || Flag_AnalysisType == 3)
+    DefineConstant[
+       T_inf = {7, 
+        Min 0, Max 30, Step 0.1,
+        Name "{00FE param./Ambient temperature for BC [°C]", Visible 1}
+    ];
+  T0[] = T_inf; // sea bottom temperature near coast [°C] https://www.yr.no/en/coast/forecast/0-722/Norway/Martin%20Linge%20A
+  EndIf
 
   k[WireConductor]       = 401;   // copper [W/m/K]
   k[WireSemiconductor]   = 0.4;   // semiconducting XLPE+carbon black [W/m/K] 
