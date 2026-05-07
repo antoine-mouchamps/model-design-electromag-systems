@@ -2,19 +2,6 @@
 // Geometrical data
 //=================================================
 
-mm = 1e-3;
-
-r_phase_cable_conductor = 29.8/2*mm; // diameter of conductor
-phase_cable_insulation_thickness = (15+0)*mm; // thickness of insulation
-r_phase_cable_with_insulation = (62.6+0)/2*mm; // diameter of phase conductor with insulation
-semiconductor_thickness = r_phase_cable_with_insulation - r_phase_cable_conductor - phase_cable_insulation_thickness; // thickness of semiconductor layer
-lead_sheath_thickness = 2.4*mm; // thickness of lead sheath
-hdpe_sheath_thickness = 2.1*mm; // thickness of inner sheath
-r_phase_cable_outer = r_phase_cable_with_insulation + lead_sheath_thickness + hdpe_sheath_thickness; // diameter of phase conductor with insulation and sheaths
-
-steel_wire_armour_thickness  = 7*mm;  // thickness of Steel pipe
-outer_sheath_cable = 4*mm;
-
 Include "cable_common.pro";
 
 //=================================================
