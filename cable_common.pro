@@ -43,4 +43,4 @@ r_cable_outer = (0*2.1*2+(185/2))*mm; // cable outer diameter
 
 scale_mesh_ground = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1 : 0.1;
 r_domain = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1.2*r_cable_outer : r_cable_outer + 1;
-r_domain_inf = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1.2*r_domain : 1.05*r_domain;
+r_domain_inf = (Flag_AnalysisType == 0 || Flag_AnalysisType == 1) ? 1.5*r_domain : 1.05*r_domain;
