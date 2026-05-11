@@ -118,7 +118,7 @@ Function {
 
   sigma[CableInsulationInside] = sigma_insulator;
   sigma[CableInsulationAround] = sigma_insulator;
-  sigma[CableSemiconductor] = sigma_insulator; // should have been semiconductor, but leads to unrealistic results
+  sigma[CableSemiconductor] = sigma_insulator;
   sigma[CableArmor] = 4.7e6; // Value from simpleCable.pro for galvanized/tensile steel
   sigma[CableOuterSheath] = sigma_insulator;
   sigma[Ground] = 1; // conductivity of soil https://www.mdpi.com/2077-1312/11/5/937
